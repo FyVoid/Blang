@@ -1,0 +1,52 @@
+#ifndef BLANG_LEXER_H
+#define BLANG_LEXER_H
+
+#include "token.hpp"
+#include "logger.hpp"
+
+#include <memory>
+#include <vector>
+
+namespace blang {
+
+namespace frontend {
+
+class Lexer {
+private:
+    uint32_t _pos = 0;
+    uint32_t _line = 0;
+    std::shared_ptr<std::vector<char>> _buffer;
+    std::shared_ptr<Logger> _logger;
+
+    inline bool atEnd() {
+        return _pos >= _buffer->size();
+    }
+    inline void step() {
+        _pos++;
+    }
+    inline char current() {
+        return atEnd() ? (*_buffer)[_buffer->size() - 1]
+            : (*_buffer)[_pos];
+    }
+    inline char peak() {
+        return atEnd() ? current() : (*_buffer)[_pos + 1];
+    }
+
+    Token lexToken();
+
+    std::string lexString();
+    std::string lexChar();
+    std::string lexNumber();
+    std::string lexIdent();
+    Token matchKeyword(const std::string& ident);
+
+public:
+    Lexer(std::shared_ptr<Logger> logger);
+    std::shared_ptr<std::vector<Token>> lexTokens(std::shared_ptr<std::vector<char>> input_buffer);
+};
+
+}
+
+}
+
+#endif
