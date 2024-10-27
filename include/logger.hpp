@@ -2,7 +2,6 @@
 #define BLANG_LOGGER_H
 
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -38,14 +37,21 @@ struct ErrorLog : public Log {
 
 struct LexerLog : public Log {
     frontend::TokenType token_type;
-    std::string value;
     LexerLog(uint32_t line, frontend::TokenType type, const std::string& value) :
-        Log(LOG_LEXER, line, ""), token_type(type), value(value) {}
+        Log(LOG_LEXER, line, value), token_type(type) {}
     virtual std::string to_string() {
-        auto value_str = value;
+        auto value_str = message;
         if (token_type == frontend::STRING) value_str = "\"" + value_str + "\"";
         if (token_type == frontend::CHAR_CONSTANT) value_str = "'" + value_str + "'";
         return buaa::to_buaa_token(token_type) + " " + value_str;
+    }
+};
+
+struct ParserLog : public Log {
+    ParserLog(uint32_t line, const std::string& name) :
+        Log(LOG_PARSER, line, name) {}
+    virtual std::string to_string() {
+        return "<" + message + ">";
     }
 };
 

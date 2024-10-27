@@ -5,12 +5,14 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 namespace blang {
 
 Blang::Blang() :
     _logger(std::make_shared<Logger>()),
-    _lexer(_logger)    
+    _lexer(_logger),
+    _parser(_logger)   
 {}
 
 std::shared_ptr<std::vector<char>> Blang::load_file(const std::string& filename) {
@@ -43,17 +45,19 @@ std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
 
     auto tokens = _lexer.lexTokens(file_buffer);
 
-    if ((tokens->end() - 1)->type == frontend::EOF_TOKEN) {
-        tokens->erase(tokens->end() - 1);
-    }
+    auto comp_unit = _parser.parse(tokens);
 
-    for (auto& token : *tokens) {
-        _logger->log(std::make_shared<LexerLog>(token.line, token.type, token.value));
-    }
-
+    std::fstream log_out("./parser.txt", std::ios::binary | std::ios::out);
     for (auto& log : _logger->logs()) {
-        std::cout << log->to_string() << std::endl;
+        log_out << log->to_string() << std::endl;
     }
+    log_out.close();
+
+    std::fstream error_out("./error.txt", std::ios::binary | std::ios::out);
+    for (auto& error : _logger->errors()) {
+        error_out << error->to_string() << std::endl;
+    }
+    error_out.close();
 
     auto ret = std::make_shared<std::vector<char>>();
 

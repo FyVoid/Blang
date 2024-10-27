@@ -3,10 +3,10 @@
 
 #include "lexer.hpp"
 #include "logger.hpp"
+#include "parser.hpp"
 
 #include <memory>
 #include <vector>
-#include <fstream>
 
 namespace blang {
 
@@ -16,6 +16,7 @@ class Blang {
 private:
     std::shared_ptr<Logger> _logger;
     Lexer _lexer;
+    Parser _parser;
     std::shared_ptr<std::vector<char>> load_file(const std::string& filename);
 public:
     Blang();

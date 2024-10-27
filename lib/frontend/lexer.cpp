@@ -81,8 +81,6 @@ std::shared_ptr<std::vector<Token>> Lexer::lexTokens(std::shared_ptr<std::vector
         step();
     }
 
-    tokens->push_back({EOF_TOKEN, "", _line});
-
     return tokens;
 }
 
