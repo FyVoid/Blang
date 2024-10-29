@@ -146,6 +146,8 @@ std::shared_ptr<ParseResult> Parser::parseCompUnit() {
         comp_unit = std::make_shared<CompNode>(sline, main_func_def);
     } else if (auto decl = tryParse<DeclNode>(&Parser::parseDecl, ret); decl) {
         comp_unit = std::make_shared<CompNode>(sline, decl);
+    } else {
+        return ret;
     }
 
     while (!atEnd()) {
@@ -156,6 +158,8 @@ std::shared_ptr<ParseResult> Parser::parseCompUnit() {
             comp_unit = std::make_shared<CompNode>(sline, decl, comp_unit);
         } else if (auto main_func_def = tryParse<MainNode>(&Parser::parseMainFuncDef, ret); main_func_def) {
             comp_unit = std::make_shared<CompNode>(sline, main_func_def, comp_unit);
+        } else {
+            return ret;
         }
     }
 
@@ -257,6 +261,9 @@ std::shared_ptr<ParseResult> Parser::parseFuncFParams() {
     auto sline = line();
 
     auto params = std::vector<std::tuple<Type*, std::string>>();
+    if (check(LEFT_BRAKET)) {
+        return ret; // abort
+    }
     params.push_back(parseFuncParam(ret));
 
     while (check(COMMA)) {
@@ -314,7 +321,11 @@ std::shared_ptr<ParseResult> Parser::parseExpStmt() {
     } else {
         auto sline = line();
         if (auto exp = tryParse<ExpNode>(&Parser::parseExp, false, ret); exp) {
-            CHECK_AND_STEP(SEMICOLON, ret);
+            if (check(SEMICOLON)) {
+                ret->log(step());
+            } else {
+                ret->logError(std::make_shared<ErrorLog>(last().line, "exp stmt no semi", buaa::ERROR_MISSING_SEMICOLON));
+            }
             ret->node = std::make_shared<ExpStmtNode>(sline, exp);
         } else {
             return ret; // abort
@@ -399,7 +410,11 @@ std::shared_ptr<ParseResult> Parser::parseForStmt() {
         auto rval = tryParse<RValNode>(&Parser::parseRVal, ret);
         for_out = std::make_shared<AssignStmtNode>(sline, lval, rval);
         ret->log(std::make_shared<ParserLog>(line(), "ForStmt"));
-        CHECK_AND_STEP(RIGHT_BRACE, ret);
+        if (check(RIGHT_BRACE)) {
+            ret->log(step());
+        } else {
+            ret->logError(std::make_shared<ErrorLog>(last().line, "for no brace", buaa::ERROR_MISSING_BRACE));
+        }
     } else {
         ret->log(step());
     }
@@ -486,7 +501,9 @@ std::shared_ptr<ParseResult> Parser::parseAssignStmt() {
 std::shared_ptr<ParseResult> Parser::parseStmt() {
     auto ret = std::make_shared<ParseResult>();
 
-    if (auto stmt = tryParse<ExpStmtNode>(&Parser::parseExpStmt, ret); stmt) {
+    if (auto stmt = tryParse<AssignStmtNode>(&Parser::parseAssignStmt, ret); stmt) {
+        ret->node = stmt;
+    } else if (auto stmt = tryParse<ExpStmtNode>(&Parser::parseExpStmt, ret); stmt) {
         ret->node = stmt;
     } else if (auto stmt = tryParse<BlockStmtNode>(&Parser::parseBlockStmt, ret); stmt) {
         ret->node = stmt;
@@ -495,27 +512,29 @@ std::shared_ptr<ParseResult> Parser::parseStmt() {
     } else if (auto stmt = tryParse<ForStmtNode>(&Parser::parseForStmt, ret); stmt) {
         ret->node = stmt;
     } else if (check(BREAK)) {
+        auto sline = line();
         ret->log(step());
         if (check(SEMICOLON)) {
             ret->log(step());
         } else {
             ret->logError(std::make_shared<ErrorLog>(last().line, "break no semi", buaa::ERROR_MISSING_SEMICOLON));
         }
-        ret->node = std::make_shared<BreakStmtNode>(line());
+        ret->node = std::make_shared<BreakStmtNode>(sline);
     } else if (check(CONTINUE)) {
+        auto sline = line();
         ret->log(step());
         if (check(SEMICOLON)) {
             ret->log(step());
         } else {
             ret->logError(std::make_shared<ErrorLog>(last().line, "break no semi", buaa::ERROR_MISSING_SEMICOLON));
         }
-        ret->node = std::make_shared<BreakStmtNode>(line());
+        ret->node = std::make_shared<BreakStmtNode>(sline);
     } else if (auto stmt = tryParse<ReturnStmtNode>(&Parser::parseReturnStmt, ret); stmt) {
         ret->node = stmt;
     } else if (auto stmt = tryParse<PrintfStmtNode>(&Parser::parsePrintfStmt, ret); stmt) {
         ret->node = stmt;
-    } else if (auto stmt = tryParse<AssignStmtNode>(&Parser::parseAssignStmt, ret); stmt) {
-        ret->node = stmt;
+    } else {
+        return ret; // abort
     }
 
     ret->log(std::make_shared<ParserLog>(line(), "Stmt"));
@@ -594,6 +613,8 @@ std::shared_ptr<ParseResult> Parser::parsePrimary() {
         ret->node = std::make_shared<PrimaryExpNode>(sline, value_n);
     } else if (auto lval = tryParse<LValNode>(&Parser::parseLVal, ret); lval) {
         ret->node = std::make_shared<PrimaryExpNode>(sline, lval);
+    } else {
+        return ret; // abort
     }
 
     ret->log(std::make_shared<ParserLog>(line(), "PrimaryExp"));
@@ -679,7 +700,7 @@ std::shared_ptr<ParseResult> Parser::parseUnaryExp() {
         if (check(RIGHT_BRACE)) {
             ret->log(step());
         } else {
-            ret->log(std::make_shared<ErrorLog>(last().line, "unary exp ident() brace missing", buaa::ERROR_MISSING_BRACE));
+            ret->logError(std::make_shared<ErrorLog>(last().line, "unary exp ident() brace missing", buaa::ERROR_MISSING_BRACE));
         }
 
         ret->node = std::make_shared<UnaryExpNode>(sline, ident, params);

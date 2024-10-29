@@ -129,14 +129,14 @@ public:
 
 class DeclNode : public AstNode {
 private:
-    const Type* _type;
+    Type* const _type;
     const bool _is_const;
     std::vector<std::shared_ptr<DefNode>> _nodes;
 public:
     DeclNode(uint32_t line, Type* type, bool is_const, std::vector<std::shared_ptr<DefNode>> vec) :
         AstNode(line), _type(type), _is_const(is_const), _nodes(vec) {}
     void accept(Visitor& visitor) override;
-    const Type* type() { return _type; }
+    Type* const type() { return _type; }
     bool is_const() { return _is_const; }
     std::vector<std::shared_ptr<DefNode>>& defs() { return _nodes; }
 };
@@ -153,12 +153,12 @@ public:
 
 class ValueNode : public AstNode {
 private:
-    const Type* _type;
+    Type* const _type;
     const std::variant<int32_t, char> _value;
 public:
     ValueNode(uint32_t line, int32_t value) : AstNode(line), _type(IntType::get()), _value(value) {}
     ValueNode(uint32_t line, char value) : AstNode(line), _type(CharType::get()), _value(value) {}
-    const Type* type() { return _type; }
+    Type* type() { return _type; }
     void accept(Visitor& visitor) override;
     template<typename T>
     T get() { return std::get<T>(_value); } // may throw error
@@ -363,7 +363,7 @@ public:
 
 class FuncDefNode : public AstNode {
 private:
-    const Type* _type;
+    Type* const _type;
     const std::string _ident;
     std::shared_ptr<FuncFParamsNode> _params;
     std::shared_ptr<BlockNode> _block;
@@ -372,7 +372,7 @@ public:
         std::shared_ptr<FuncFParamsNode> params=nullptr) :
         AstNode(line), _type(type), _ident(ident), _params(params), _block(block) {}
     void accept(Visitor& visitor) override;
-    const Type*& type() { return _type; }
+    Type* type() { return _type; }
     const std::string& ident() { return _ident; }
     std::shared_ptr<FuncFParamsNode> params() { return _params; }
     std::shared_ptr<BlockNode> block() { return _block; }

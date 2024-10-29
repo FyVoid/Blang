@@ -8,7 +8,7 @@ namespace entities {
 
 class Visitor {
 protected:
-    Visitor();
+    Visitor() {}
 public:
     virtual void visit(BinaryExpNode& node) {}
     virtual void visit(UnaryExpNode& node) {}

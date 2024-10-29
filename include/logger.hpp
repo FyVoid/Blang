@@ -55,6 +55,16 @@ struct ParserLog : public Log {
     }
 };
 
+struct SyntaxLog : public Log {
+    uint32_t blockn;
+    std::string type;
+    SyntaxLog(uint32_t line, uint32_t blockn, const std::string& name, const std::string& type) :
+        Log(LOG_SYNTAX, line, name), blockn(blockn), type(type) {}
+    virtual std::string to_string() {
+        return std::to_string(blockn) + " " + message + " " + type;
+    }
+};
+
 class Logger {
 private:
     std::vector<std::shared_ptr<ErrorLog>> _errors;
@@ -63,6 +73,8 @@ public:
     Logger();
     std::vector<std::shared_ptr<ErrorLog>>& errors() { return _errors; }
     std::vector<std::shared_ptr<Log>>& logs() { return _logs; }
+    std::vector<std::shared_ptr<SyntaxLog>> syntax_logs();
+    void sortError();
     void logError(std::shared_ptr<ErrorLog> log);
     void log(std::shared_ptr<Log> log);
 };

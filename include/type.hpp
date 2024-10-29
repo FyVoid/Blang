@@ -17,13 +17,14 @@ enum BlangType {
 
 class Type {
 protected:
-    BlangType _type;
-    Type(BlangType type) : _type(type) {}
+    BlangType _type_id;
+    Type(BlangType type) : _type_id(type) {}
 public:
-    BlangType type() { return _type; }
+    BlangType type_id() { return _type_id; }
     static bool is_same(Type* t1, Type* t2) {
         return t1 == t2;
     }
+    virtual ~Type() = default;
 };
 
 class ValueType : public Type {
@@ -69,7 +70,7 @@ class PtrType : public Type {
 protected:
     Type* _next;
     PtrType(Type* type) : Type(TYPE_PTR), _next(type) {
-        if (type->type() == TYPE_VOID) {
+        if (type->type_id() == TYPE_VOID) {
             throw std::runtime_error("Ptr type cannot point to type void!");
         }
     }
@@ -84,14 +85,15 @@ public:
             return ptr_t;
         }
     } 
+    Type* next() { return _next; }
 };
 
 class ArrayType : public Type {
 protected:
     uint32_t _length;
     Type* _type;
-    ArrayType(Type* type, uint32_t length) : Type(type->type()), _type(type), _length(length) {
-        if (type->type() == TYPE_VOID) {
+    ArrayType(Type* type, uint32_t length) : Type(type->type_id()), _type(type), _length(length) {
+        if (type->type_id() == TYPE_VOID) {
             throw std::runtime_error("Array type cannot be void!");
         }
     }
@@ -107,6 +109,7 @@ public:
             return array_t;
         }
     }
+    Type* type() { return _type; }
     uint32_t length() { return _length; }
 };
 

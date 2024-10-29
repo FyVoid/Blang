@@ -1,6 +1,7 @@
 #include "lexer.hpp"
 #include "buaa.hpp"
 #include "logger.hpp"
+#include "token.hpp"
 
 #include <cctype>
 #include <map>
@@ -44,23 +45,29 @@ std::shared_ptr<std::vector<Token>> Lexer::lexTokens(std::shared_ptr<std::vector
         while ((current() == ' ' || current() == '\t' || current() == '\b') && !atEnd()) {
             step();
         }
-        if (current() == '\n') {
+        if (current() == '\n' || current() == '\r') {
+            if (current() == '\r') step();
             step();
             _line++;
             continue;
         }
+        if (atEnd()) {
+            break;
+        }
         // clear comments
         if (current() == '/') {
             if (peak() == '/') {
-                while (peak() != '\n' && !atEnd()) {
+                while (peak() != '\n' && peak() != '\r' && !atEnd()) {
                     step();
                 }
+                if (peak() == '\r') step();
                 step();
                 continue;
             } else if (peak() == '*') {
                 step();
                 while (true) {
-                    if (current() == '\n') {
+                    if (current() == '\n' || current() == '\r') {
+                        if (current() == '\r') step();
                         _line++;
                     }
                     if (peak() == '*') {

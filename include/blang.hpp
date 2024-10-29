@@ -4,6 +4,7 @@
 #include "lexer.hpp"
 #include "logger.hpp"
 #include "parser.hpp"
+#include "syntax_checker.hpp"
 
 #include <memory>
 #include <vector>
@@ -17,6 +18,7 @@ private:
     std::shared_ptr<Logger> _logger;
     Lexer _lexer;
     Parser _parser;
+    SyntaxChecker _syntax_checker;
     std::shared_ptr<std::vector<char>> load_file(const std::string& filename);
 public:
     Blang();

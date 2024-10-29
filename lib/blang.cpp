@@ -1,7 +1,6 @@
 #include "blang.hpp"
 #include "lexer.hpp"
 #include "logger.hpp"
-#include "token.hpp"
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -12,7 +11,8 @@ namespace blang {
 Blang::Blang() :
     _logger(std::make_shared<Logger>()),
     _lexer(_logger),
-    _parser(_logger)   
+    _parser(_logger),
+    _syntax_checker(_logger)
 {}
 
 std::shared_ptr<std::vector<char>> Blang::load_file(const std::string& filename) {
@@ -47,15 +47,27 @@ std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
 
     auto comp_unit = _parser.parse(tokens);
 
-    std::fstream log_out("./parser.txt", std::ios::binary | std::ios::out);
-    for (auto& log : _logger->logs()) {
+    auto global_table = _syntax_checker.check(comp_unit);
+
+    std::ofstream log_out("./symbol.txt");
+    for (auto& log : _logger->syntax_logs()) {
         log_out << log->to_string() << std::endl;
+        if (_logger->errors().empty()) {
+            std::cout << log->to_string() << std::endl;
+        }
     }
     log_out.close();
 
-    std::fstream error_out("./error.txt", std::ios::binary | std::ios::out);
+    _logger->sortError();
+    std::ofstream error_out("./error.txt");
+    uint32_t last_line = -1;
     for (auto& error : _logger->errors()) {
+        if (last_line == error->line) {
+            continue;
+        }
         error_out << error->to_string() << std::endl;
+        std::cout << error->to_string() << std::endl;
+        last_line = error->line;
     }
     error_out.close();
 
