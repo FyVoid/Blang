@@ -2,7 +2,6 @@
 #define BLANG_IR_H
 
 #include "type.hpp"
-#include <__config>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -29,6 +28,7 @@ protected:
     Instruct(InstructType type) : _type(type) {}
 public:
     InstructType typeId() { return _type; }
+    // TODO: add comment
     virtual std::shared_ptr<Value> reg() = 0;
     virtual std::string to_string() = 0;
 };
@@ -59,7 +59,7 @@ public:
         Instruct(INSTRUCT_GEP), _result(result), _ptr(ptr), _elem(elem), _offset(offset) {}
     virtual std::shared_ptr<Value> reg() { return _result; }
     virtual std::string to_string() {
-        return _result->ident() + " = getelementptr " + _result->getType()->to_string() + ", " + _ptr->to_string() + ", " + _elem->to_string() + ", " + _offset->to_string();
+        return _result->ident() + " = getelementptr " + _ptr->getType()->to_string() + ", " + _ptr->to_string() + ", " + _elem->to_string() + ", " + _offset->to_string();
     }
 };
 
@@ -112,6 +112,8 @@ public:
         std::string ret = "ret";
         if (_ret_value) {
             ret += " " + _ret_value->to_string();
+        } else {
+            ret += " void";
         }
         return ret;
     }
@@ -159,7 +161,7 @@ public:
     DivInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) :
         ArithInstruct(INSTRUCT_DIV, reg, left, right) {}
     virtual std::string to_string() {
-        return _reg->ident() + " = div " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
+        return _reg->ident() + " = sdiv " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
     }
 };
 
@@ -168,7 +170,7 @@ public:
     ModInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) :
         ArithInstruct(INSTRUCT_MOD, reg, left, right) {}
     virtual std::string to_string() {
-        return _reg->ident() + " = mod " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
+        return _reg->ident() + " = srem " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
     }
 };
 
@@ -195,7 +197,7 @@ public:
     EqInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) :
         ArithInstruct(INSTRUCT_EQ, reg, left, right) {}
     virtual std::string to_string() {
-        return _reg->ident() + " = icmp seq " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
+        return _reg->ident() + " = icmp eq " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
     }
 };
 
@@ -204,7 +206,7 @@ public:
     NeqInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) :
         ArithInstruct(INSTRUCT_NEQ, reg, left, right) {}
     virtual std::string to_string() {
-        return _reg->ident() + " = icmp sne " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
+        return _reg->ident() + " = icmp ne " + _left->getType()->to_string() + " " + _left->ident() + ", " + _right->ident();
     }
 };
 
@@ -299,14 +301,12 @@ class Block {
 private:
     std::string _label;
     std::vector<std::shared_ptr<Instruct>> _instructions;
-    int32_t _counter = 0;
 public:
     Block(std::string label) : _label(label) {}
     std::string label() { return _label; }
     std::vector<std::shared_ptr<Instruct>>& instructions() { return _instructions; }
     std::shared_ptr<Instruct>& last() { return *(_instructions.end() - 1); }
     std::string to_string();
-    std::string next_reg() { return std::to_string(_counter++); }
 };
 
 class Function {
@@ -316,6 +316,7 @@ private:
     std::vector<std::tuple<Type*, std::string>> _params;
     std::vector<std::shared_ptr<Block>> _blocks;
     std::shared_ptr<Block> _current_block;
+    uint64_t _reg_iter;
 public:
     Function(Type* ret_type, std::string ident, std::vector<std::tuple<Type*, std::string>> params) :
         _ret_type(ret_type), _ident(ident), _params(params), _blocks({}) {}
@@ -327,6 +328,7 @@ public:
     void setBlock(std::shared_ptr<Block> block) { _current_block = block; }
     void addBlock(std::string label="");
     std::string to_string();
+    std::string next_reg() { return std::to_string(_reg_iter++); }
 };
 
 class CallInstruct : public Instruct {
@@ -347,13 +349,15 @@ public:
             ret += "call void ";
         }
         ret += "@" + _function->ident() + "(";
-        auto iter = _params.begin();
-        while (iter + 1 != _params.end()) {
-            ret += (*iter)->to_string() + ", ";
-            iter++;
+        if (!_params.empty()) {
+            auto iter = _params.begin();
+            while (iter + 1 != _params.end()) {
+                ret += (*iter)->to_string() + ", ";
+                iter++;
+            }
+            if (iter != _params.end()) {
+                ret += (*iter)->to_string();
         }
-        if (iter != _params.end()) {
-            ret += (*iter)->to_string();
         }
         ret += ")";
         return ret;
@@ -401,7 +405,12 @@ public:
     std::vector<std::shared_ptr<Instruct>>& global() { return _global; }
     std::map<std::string, std::shared_ptr<Function>>& functions() { return _functions; }
     std::shared_ptr<Function> current_function() { return _current_function; }
-    std::shared_ptr<Block> current_block() { return _current_function->current_block(); }
+    std::shared_ptr<Block> current_block() { 
+        if (!_current_function) {
+            return nullptr;
+        }
+        return _current_function->current_block(); 
+    }
     void setFunction(std::shared_ptr<Function> function) { _current_function = function; }
     std::string to_string();
 };
@@ -412,7 +421,7 @@ private:
     uint64_t _block_iter;
 public:
     IrFactory(std::shared_ptr<IrModule> module) : _module(module) {}
-    inline std::string next_reg() { return _module->current_block()->next_reg(); }
+    inline std::string next_reg() { return _module->current_function()->next_reg(); }
     inline std::string next_block() { return std::to_string(_block_iter++); }
     void addFunction(Type* ret_type, std::string ident, std::vector<std::tuple<Type*, std::string>> params);
     void addDefInstruct(bool is_const, std::shared_ptr<PtrValue> var, std::shared_ptr<Value> init);

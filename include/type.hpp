@@ -104,7 +104,7 @@ public:
         }
     } 
     Type* next() { return _next; }
-    virtual std::string to_string() { return "ptr"; }
+    virtual std::string to_string() { return _next->to_string() + "*"; }
 };
 
 class ArrayType : public Type {
@@ -227,7 +227,7 @@ private:
     std::string _ident;
 public:
     PtrValue(Type* type, std::string ident) : Value(type), _ident(ident) {}
-    virtual std::string to_string() { return "ptr %" + _ident; }
+    virtual std::string to_string() { return getType()->to_string() + "* %" + _ident; }
     virtual std::string ident() { return "%" + _ident; }
     std::string def() { return "@" + _ident; }
 };

@@ -31,11 +31,11 @@ std::string Function::to_string() {
     if (!_params.empty()) {
         while ((param_iter + 1) != _params.end()) {
             auto [type, ident] = *param_iter;
-            ret += type->to_string() + " " + ident + ", ";
+            ret += type->to_string() + " %" + ident + ", ";
             param_iter++;
         }
         auto [type, ident] = *param_iter;
-        ret += type->to_string() + " " + ident;
+        ret += type->to_string() + " %" + ident;
     }
     ret += ") {\n";
 
@@ -43,7 +43,7 @@ std::string Function::to_string() {
         ret += block->to_string();
     }
 
-    ret += "}";
+    ret += "}\n";
     return ret;
 }
 
@@ -51,7 +51,7 @@ std::string IrModule::to_string() {
     std::string ret = std::string("declare i32 @getint()\n")
                         + "declare i32 @getchar()\n"
                         + "declare void @putint(i32)\n"
-                        + "declare void @putch(i32)\n"
+                        + "declare void @putchar(i32)\n"
                         + "declare void @putstr(i8*)\n";
 
     for (auto& instruct : _global) {
@@ -66,7 +66,7 @@ std::string IrModule::to_string() {
 }
 
 void IrFactory::addDefInstruct(bool is_const, std::shared_ptr<PtrValue> var, std::shared_ptr<Value> init) {
-    if (_module->current_block()) {
+    if (!_module->current_block()) {
         _module->global().push_back(std::make_shared<DefInstruct>(is_const, var, init));
     } else {
         _module->current_block()->instructions().push_back(std::make_shared<DefInstruct>(is_const, var, init));

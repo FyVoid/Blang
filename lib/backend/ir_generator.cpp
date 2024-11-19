@@ -35,7 +35,7 @@ void IrGenerator::setGlobalVar() {
         auto type = var->type();
         std::shared_ptr<Value> value;
         std::shared_ptr<PtrValue> ptr;
-        auto ident = var->ident() + "_" + _factory->next_reg();
+        auto ident = var->ident();
         if (Type::is_same(type, IntType::get())) {
             value = std::make_shared<IntConstValue>(*(var->get<int32_t>()));
             ptr = std::make_shared<PtrValue>(var->type(), ident);
@@ -125,7 +125,7 @@ void IrGenerator::visit(DeclNode& node) {
         // add instruction
         std::shared_ptr<PtrValue> ptr;
         auto type = var->type();
-        auto ident = var->ident() + "_" + _factory->next_reg();
+        auto ident = _factory->next_reg();
         if (Type::is_same(type, IntType::get())) {
             ptr = std::make_shared<PtrValue>(var->type(), ident);
         } else if (Type::is_same(type, CharType::get())) {
@@ -347,6 +347,9 @@ void IrGenerator::visit(FuncDefNode& node) {
     auto tmp = _current_table;
     _current_table = std::make_shared<BlockSymbolTable>(_current_table);
     node.block()->accept(*this);
+    if (Type::is_same(node.type(), VoidType::get())) {
+        _factory->addRetInstruct(nullptr);
+    }
     _current_table = tmp;
 }
 
@@ -446,7 +449,9 @@ void IrGenerator::visit(PrintfStmtNode& node) {
             auto alloca = std::make_shared<PtrValue>(type, _factory->next_reg());
             _factory->addAllocaInstruct(alloca);
             _factory->addStoreInstruct(str_array, alloca);
-            _factory->addCallExternalInstruct(nullptr, "putstr", {alloca});
+            auto ptr = std::make_shared<PtrValue>(CharType::get(), _factory->next_reg());
+            _factory->addGepInstruct(ptr, alloca, std::make_shared<IntConstValue>(0), std::make_shared<IntConstValue>(0));
+            _factory->addCallExternalInstruct(nullptr, "putstr", {ptr});
         }
         if (d_next < c_next && d_next != std::string::npos) {
             params[param_count++]->accept(*this);
@@ -456,9 +461,6 @@ void IrGenerator::visit(PrintfStmtNode& node) {
         } else if (c_next < d_next && c_next != std::string::npos) {
             params[param_count++]->accept(*this);
             auto reg = _module->current_block()->last()->reg();
-            auto tmp = reg;
-            reg = std::make_shared<CharValue>(_factory->next_reg());
-            _factory->addTruncInstruct(reg, tmp);
             _factory->addCallExternalInstruct(nullptr, "putchar", {reg});
             pos = next + 2;
         }
@@ -556,7 +558,7 @@ void IrGenerator::visit(IfStmtNode& node) {
     if (node.else_stmt()) {
         _module->current_function()->setBlock(else_body);
         node.else_stmt()->accept(*this);
-        _factory->addBrInstruct("else_body" + ifn);
+        _factory->addBrInstruct("if_end" + ifn);
     }
 
     _module->current_function()->setBlock(if_end);

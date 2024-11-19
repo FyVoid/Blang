@@ -54,7 +54,7 @@ std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
 
     auto output = llvm_module->to_string();
 
-    std::ofstream ir_out("./ir.txt");
+    std::ofstream ir_out("./llvm_ir.txt");
     ir_out << output;
     ir_out.close();
 
