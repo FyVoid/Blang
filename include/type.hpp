@@ -3,16 +3,19 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
 
 namespace blang {
 
 namespace entities {
 
 enum BlangType {
-    TYPE_INT, TYPE_CHAR, TYPE_PTR, TYPE_VOID,
+    TYPE_INT, TYPE_CHAR, TYPE_PTR, TYPE_VOID, TYPE_BOOL,
 };
 
 class Type {
@@ -25,6 +28,7 @@ public:
         return t1 == t2;
     }
     virtual ~Type() = default;
+    virtual std::string to_string() = 0;
 };
 
 class ValueType : public Type {
@@ -44,6 +48,7 @@ public:
         static IntType* instance = new IntType();
         return instance;
     }
+    virtual std::string to_string() { return "i32"; }
 };
 
 class CharType : public ValueType {
@@ -54,6 +59,18 @@ public:
         static CharType* instance = new CharType();
         return instance;
     }
+    virtual std::string to_string() { return "i8"; }
+};
+
+class BoolType: public ValueType {
+protected:
+    BoolType() : ValueType(TYPE_BOOL) {}
+public:
+    static BoolType* get() {
+        static BoolType* instance = new BoolType();
+        return instance;
+    }
+    virtual std::string to_string() { return "i1"; }
 };
 
 class VoidType : public Type {
@@ -64,6 +81,7 @@ public:
         static VoidType* instance = new VoidType();
         return instance;
     }
+    virtual std::string to_string() { return "void"; }
 };
 
 class PtrType : public Type {
@@ -86,6 +104,7 @@ public:
         }
     } 
     Type* next() { return _next; }
+    virtual std::string to_string() { return "ptr"; }
 };
 
 class ArrayType : public Type {
@@ -111,6 +130,106 @@ public:
     }
     Type* type() { return _type; }
     uint32_t length() { return _length; }
+    virtual std::string to_string() {
+        return "[" + std::to_string(_length) + " x " + _type->to_string() + "]";
+    }
+};
+
+class Value {
+protected:
+    Type* _type;
+    Value(Type* type) : _type(type) {}
+public:
+    Type* getType() { return _type; }
+    virtual std::string to_string() = 0;
+    virtual std::string ident() = 0;
+};
+
+class IntConstValue : public Value {
+private:
+    int32_t _content;
+public:
+    IntConstValue(int32_t content) : Value(IntType::get()), _content(content) {}
+    virtual std::string to_string() { return "i32 " + std::to_string(_content); }
+    virtual std::string ident() { return std::to_string(_content); }
+};
+
+class CharConstValue : public Value {
+private:
+    char _content;
+public:
+    CharConstValue(char content) : Value(CharType::get()), _content(content) {}
+    virtual std::string to_string() { return "i8 " + std::to_string(static_cast<int32_t>(_content)); }
+    virtual std::string ident() { return std::to_string(_content); }    
+};
+
+class BoolConstValue : public Value {
+private:
+    bool _content;
+public:
+    BoolConstValue(bool content) : Value(BoolType::get()), _content(content) {}
+    virtual std::string to_string() { return "i1 " + std::to_string(static_cast<int32_t>(_content)); }
+    virtual std::string ident() { return std::to_string(_content); }
+};
+
+class ArrayValue : public Value {
+private:
+    std::vector<std::shared_ptr<Value>> _content;
+public:
+    ArrayValue(Type* type, std::vector<std::shared_ptr<Value>> content) : Value(type), _content(content) {}
+    virtual std::string to_string() {
+        std::string ret = getType()->to_string() + " [";
+        for (int i = 0; i < _content.size() - 1; i++) {
+            ret += _content[i]->to_string() + ", ";
+        }
+        ret += _content[_content.size() - 1]->to_string() + "]";
+        return ret;
+    }
+    virtual std::string ident() {
+        std::string ret = "[";
+        for (int i = 0; i < _content.size() - 1; i++) {
+            ret += _content[i]->to_string() + ", ";
+        }
+        ret += _content[_content.size() - 1]->to_string() + "]";
+        return ret;
+    }
+};
+
+class IntValue : public Value {
+private:
+    std::string _ident;
+public:
+    IntValue(std::string ident) : Value(IntType::get()), _ident(ident) {}
+    virtual std::string to_string() { return "i32 %" + _ident; }
+    virtual std::string ident() { return "%" + _ident; }
+};
+
+class CharValue : public Value {
+private:
+    std::string _ident;
+public:
+    CharValue(std::string ident) : Value(CharType::get()), _ident(ident) {}
+    virtual std::string to_string() { return "i8 %" + _ident; }
+    virtual std::string ident() { return "%" + _ident; }
+};
+
+class BoolValue : public Value {
+private:
+    std::string _ident;
+public:
+    BoolValue(std::string ident) : Value(BoolType::get()), _ident(ident) {}
+    virtual std::string to_string() { return "i1 %" + _ident; }
+    virtual std::string ident() { return "%" + _ident; }
+};
+
+class PtrValue : public Value {
+private:
+    std::string _ident;
+public:
+    PtrValue(Type* type, std::string ident) : Value(type), _ident(ident) {}
+    virtual std::string to_string() { return "ptr %" + _ident; }
+    virtual std::string ident() { return "%" + _ident; }
+    std::string def() { return "@" + _ident; }
 };
 
 }

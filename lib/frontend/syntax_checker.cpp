@@ -31,6 +31,7 @@ void SyntaxChecker::visit(CompNode& node) {
     } else if (node.func_def()) {
         node.func_def()->accept(*this);
     } else if (node.main_func_def()) {
+        _global_table->main_node() = node.main_func_def();
         node.main_func_def()->accept(*this);
     }
 }

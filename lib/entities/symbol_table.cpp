@@ -1,6 +1,7 @@
 #include "symbol_table.hpp"
 #include "type.hpp"
 #include <memory>
+#include <vector>
 
 namespace blang {
 
@@ -43,6 +44,28 @@ std::shared_ptr<Symbol> SymbolTable::get(const std::string& ident) {
     }
     
     return nullptr;
+}
+
+std::vector<std::shared_ptr<Var>> SymbolTable::getVars() {
+    std::vector<std::shared_ptr<Var>> ret{};
+    for (auto& [ident, symbol] : _symbols) {
+        if (auto var = std::dynamic_pointer_cast<Var>(symbol); var) {
+            ret.push_back(var);
+        }
+    }
+
+    return ret;
+}
+
+std::vector<std::shared_ptr<Func>> SymbolTable::getFuncs() {
+    std::vector<std::shared_ptr<Func>> ret{};
+    for (auto& [ident, symbol] : _symbols) {
+        if (auto func = std::dynamic_pointer_cast<Func>(symbol); func) {
+            ret.push_back(func);
+        }
+    }
+
+    return ret;
 }
 
 bool GlobalSymbolTable::addVar(std::shared_ptr<Var> var) {

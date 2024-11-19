@@ -12,7 +12,8 @@ Blang::Blang() :
     _logger(std::make_shared<Logger>()),
     _lexer(_logger),
     _parser(_logger),
-    _syntax_checker(_logger)
+    _syntax_checker(_logger),
+    _ir_generator(_logger)
 {}
 
 std::shared_ptr<std::vector<char>> Blang::load_file(const std::string& filename) {
@@ -49,14 +50,22 @@ std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
 
     auto global_table = _syntax_checker.check(comp_unit);
 
-    std::ofstream log_out("./symbol.txt");
-    for (auto& log : _logger->syntax_logs()) {
-        log_out << log->to_string() << std::endl;
-        if (_logger->errors().empty()) {
-            std::cout << log->to_string() << std::endl;
-        }
-    }
-    log_out.close();
+    auto llvm_module = _ir_generator.gen(global_table);
+
+    auto output = llvm_module->to_string();
+
+    std::ofstream ir_out("./ir.txt");
+    ir_out << output;
+    ir_out.close();
+
+    // std::ofstream log_out("./symbol.txt");
+    // for (auto& log : _logger->syntax_logs()) {
+    //     log_out << log->to_string() << std::endl;
+    //     if (_logger->errors().empty()) {
+    //         std::cout << log->to_string() << std::endl;
+    //     }
+    // }
+    // log_out.close();
 
     _logger->sortError();
     std::ofstream error_out("./error.txt");

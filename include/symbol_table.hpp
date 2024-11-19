@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 #include "ast.hpp"
+#include "ir.hpp"
 #include "type.hpp"
 
 namespace blang {
@@ -27,6 +28,7 @@ class Var : public Symbol {
 private:
     Type* const _type;
     const bool _is_const;
+    std::shared_ptr<PtrValue> _value;
     void* _content;
     Var(Type* type, const std::string& ident, bool is_const) :
         Symbol(ident), _type(type), _is_const(is_const) {}
@@ -74,12 +76,14 @@ public:
     bool is_const() { return _is_const; }
     template<typename T>
     T* get() { return static_cast<T*>(_content); }
+    std::shared_ptr<PtrValue>& value() { return _value; }
 };
 
 class Func : public Symbol {
 private:
     Type* const _return_type;
     const std::vector<std::tuple<Type*, std::string>> _params;
+    std::shared_ptr<Function> _function;
     FuncDefNode* const _node;
 public:
     Func(Type* return_type, const std::string& ident, std::vector<std::tuple<Type*, std::string>> params, FuncDefNode* node) :
@@ -87,6 +91,7 @@ public:
     Type* return_type() { return _return_type; }
     const std::vector<std::tuple<Type*, std::string>>& params() { return _params; }
     FuncDefNode* node() { return _node; }
+    std::shared_ptr<Function>& function() { return _function; }
 };
 
 class SymbolTable {
@@ -106,6 +111,8 @@ public:
     virtual bool addFunc(std::shared_ptr<Func> func) = 0;
     virtual std::shared_ptr<Var> getVar(const std::string& ident) = 0;
     virtual std::shared_ptr<Func> getFunc(const std::string& ident) = 0;
+    std::vector<std::shared_ptr<Var>> getVars();
+    std::vector<std::shared_ptr<Func>> getFuncs();
 };
 
 class GlobalSymbolTable : public SymbolTable {
