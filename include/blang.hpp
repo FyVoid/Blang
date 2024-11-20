@@ -4,6 +4,7 @@
 #include "ir_generator.hpp"
 #include "lexer.hpp"
 #include "logger.hpp"
+#include "optimizer.hpp"
 #include "parser.hpp"
 #include "syntax_checker.hpp"
 
@@ -22,6 +23,7 @@ private:
     Parser _parser;
     SyntaxChecker _syntax_checker;
     IrGenerator _ir_generator;
+    Optimizer _optimizer;
     std::shared_ptr<std::vector<char>> load_file(const std::string& filename);
 public:
     Blang();

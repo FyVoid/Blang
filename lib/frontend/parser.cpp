@@ -526,9 +526,9 @@ std::shared_ptr<ParseResult> Parser::parseStmt() {
         if (check(SEMICOLON)) {
             ret->log(step());
         } else {
-            ret->logError(std::make_shared<ErrorLog>(last().line, "break no semi", buaa::ERROR_MISSING_SEMICOLON));
+            ret->logError(std::make_shared<ErrorLog>(last().line, "continue no semi", buaa::ERROR_MISSING_SEMICOLON));
         }
-        ret->node = std::make_shared<BreakStmtNode>(sline);
+        ret->node = std::make_shared<ContinueStmtNode>(sline);
     } else if (auto stmt = tryParse<ReturnStmtNode>(&Parser::parseReturnStmt, ret); stmt) {
         ret->node = stmt;
     } else if (auto stmt = tryParse<PrintfStmtNode>(&Parser::parsePrintfStmt, ret); stmt) {

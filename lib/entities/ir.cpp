@@ -69,7 +69,7 @@ void IrFactory::addDefInstruct(bool is_const, std::shared_ptr<PtrValue> var, std
     if (!_module->current_block()) {
         _module->global().push_back(std::make_shared<DefInstruct>(is_const, var, init));
     } else {
-        _module->current_block()->instructions().push_back(std::make_shared<DefInstruct>(is_const, var, init));
+        _module->current_block()->push_back(std::make_shared<DefInstruct>(is_const, var, init));
     }
 }
 
@@ -81,99 +81,105 @@ void IrFactory::addFunction(Type* ret_type, std::string ident, std::vector<std::
 }
 
 void IrFactory::addLoadInstruct(std::shared_ptr<Value> from, std::shared_ptr<Value> to) {
-    _module->current_block()->instructions().push_back(std::make_shared<LoadInstruct>(from, to));
+    _module->current_block()->push_back(std::make_shared<LoadInstruct>(from, to));
 }
 
 void IrFactory::addStoreInstruct(std::shared_ptr<Value> from, std::shared_ptr<PtrValue> to) {
-    _module->current_block()->instructions().push_back(std::make_shared<StoreInstruct>(from, to));
+    _module->current_block()->push_back(std::make_shared<StoreInstruct>(from, to));
 }
 
 void IrFactory::addAllocaInstruct(std::shared_ptr<PtrValue> var) {
-    _module->current_block()->instructions().push_back(std::make_shared<AllocaInstruct>(var));
+    _module->current_block()->push_back(std::make_shared<AllocaInstruct>(var));
 }
 
 void IrFactory::addAddInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<AddInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<AddInstruct>(reg, left, right));
 }
 
 void IrFactory::addSubInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<SubInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<SubInstruct>(reg, left, right));
 }
 
 void IrFactory::addMulInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<MulInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<MulInstruct>(reg, left, right));
 }
 
 void IrFactory::addDivInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<DivInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<DivInstruct>(reg, left, right));
 }
 
 void IrFactory::addModInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<ModInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<ModInstruct>(reg, left, right));
 }
 
 void IrFactory::addRetInstruct(std::shared_ptr<Value> ret_value) {
-    _module->current_block()->instructions().push_back(std::make_shared<RetInstruct>(ret_value));
+    _module->current_block()->push_back(std::make_shared<RetInstruct>(ret_value));
+    _module->current_block()->ended() = true;
 }
 
-void IrFactory::addCallInstruct(std::shared_ptr<PtrValue> result, std::shared_ptr<Function> function, std::vector<std::shared_ptr<Value>> params) {
-    _module->current_block()->instructions().push_back(std::make_shared<CallInstruct>(result, function, params));
+void IrFactory::addCallInstruct(std::shared_ptr<Value> result, std::shared_ptr<Function> function, std::vector<std::shared_ptr<Value>> params) {
+    _module->current_block()->push_back(std::make_shared<CallInstruct>(result, function, params));
 }
 
 void IrFactory::addAndInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<AndInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<AndInstruct>(reg, left, right));
 }
 
 void IrFactory::addOrInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<OrInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<OrInstruct>(reg, left, right));
 }
 
 void IrFactory::addEqInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<EqInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<EqInstruct>(reg, left, right));
 }
 
 void IrFactory::addNeqInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<NeqInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<NeqInstruct>(reg, left, right));
 }
 
 void IrFactory::addGeInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<GeInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<GeInstruct>(reg, left, right));
 }
 
 void IrFactory::addGtInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<GtInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<GtInstruct>(reg, left, right));
 }
 
 void IrFactory::addLtInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<LtInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<LtInstruct>(reg, left, right));
 }
 
 void IrFactory::addLeInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right) {
-    _module->current_block()->instructions().push_back(std::make_shared<LeInstruct>(reg, left, right));
+    _module->current_block()->push_back(std::make_shared<LeInstruct>(reg, left, right));
 }
 
 void IrFactory::addGepInstruct(std::shared_ptr<PtrValue> result, std::shared_ptr<PtrValue> ptr, std::shared_ptr<IntConstValue> elem, std::shared_ptr<IntConstValue> offset) {
-    _module->current_block()->instructions().push_back(std::make_shared<GEPInstruct>(result, ptr, elem, offset));
+    _module->current_block()->push_back(std::make_shared<GEPInstruct>(result, ptr, elem, offset));
 }
 
 void IrFactory::addBrInstruct(std::string label) {
-    _module->current_block()->instructions().push_back(std::make_shared<BrInstruct>(label));
+    _module->current_block()->next().push_back(label);
+    _module->current_block()->push_back(std::make_shared<BrInstruct>(label));
+    _module->current_block()->ended() = true;
 }
 
 void IrFactory::addCondBrInstruct(std::shared_ptr<Value> cond, std::string true_label, std::string false_label) {
-    _module->current_block()->instructions().push_back(std::make_shared<CondBrInstruct>(cond, true_label, false_label));
+    _module->current_block()->next().push_back(true_label);
+    _module->current_block()->next().push_back(false_label);
+    _module->current_block()->push_back(std::make_shared<CondBrInstruct>(cond, true_label, false_label));
+    _module->current_block()->ended() = true;
 }
 
 void IrFactory::addSextInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand) {
-    _module->current_block()->instructions().push_back(std::make_shared<SextInstruct>(result, operand));
+    _module->current_block()->push_back(std::make_shared<SextInstruct>(result, operand));
 }
 
 void IrFactory::addTruncInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand) {
-    _module->current_block()->instructions().push_back(std::make_shared<TruncInstruct>(result, operand));
+    _module->current_block()->push_back(std::make_shared<TruncInstruct>(result, operand));
 }
 
 void IrFactory::addCallExternalInstruct(std::shared_ptr<Value> result, std::string function, std::vector<std::shared_ptr<Value>> params) {
-    _module->current_block()->instructions().push_back(std::make_shared<CallExternalInstruct>(result, function, params));
+    _module->current_block()->push_back(std::make_shared<CallExternalInstruct>(result, function, params));
 }
 
 }

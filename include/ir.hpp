@@ -43,7 +43,7 @@ public:
         Instruct(INSTRUCT_DEF), _is_const(is_const), _var(var), _init(init) {}
     virtual std::shared_ptr<Value> reg() { return _var; }
     virtual std::string to_string() {
-        auto flag = _is_const ? "global" : "constant";
+        auto flag = _is_const ? "constant" : "global";
         return _var->def() + " = " + flag + " " + _var->getType()->to_string() + " " + _init->ident(); 
     }
 };
@@ -59,7 +59,13 @@ public:
         Instruct(INSTRUCT_GEP), _result(result), _ptr(ptr), _elem(elem), _offset(offset) {}
     virtual std::shared_ptr<Value> reg() { return _result; }
     virtual std::string to_string() {
-        return _result->ident() + " = getelementptr " + _ptr->getType()->to_string() + ", " + _ptr->to_string() + ", " + _elem->to_string() + ", " + _offset->to_string();
+        auto ret = _result->ident() + " = getelementptr ";
+        ret += _ptr->getType()->to_string() + ", " + _ptr->to_string();
+        if (_elem) {
+            ret += ", " + _elem->to_string();
+        }
+        ret += ", " + _offset->to_string();
+        return ret;
     }
 };
 
@@ -84,7 +90,7 @@ public:
         Instruct(INSTRUCT_STORE), _from(from), _to(to) {}
     virtual std::shared_ptr<Value> reg() { return _to; }
     virtual std::string to_string() {
-        return "store " + _to->getType()->to_string() + " " + _from->ident() + ", " + _to->to_string();
+        return "store " + _from->getType()->to_string() + " " + _from->ident() + ", " + _to->to_string();
     }
 };
 
@@ -255,6 +261,7 @@ public:
     virtual std::string to_string() {
         return "br label %" + _label;
     }
+    std::string label() { return _label; }
 };
 
 class CondBrInstruct : public Instruct {
@@ -269,6 +276,9 @@ public:
     virtual std::string to_string() {
         return "br i1 " + _cond->ident() + ", label %" + _true_label + ", label %" + _false_label;
     }
+    std::shared_ptr<Value> cond() { return _cond; }
+    std::string true_label() { return _true_label; }
+    std::string false_label() { return _false_label; }
 };
 
 class SextInstruct : public Instruct {
@@ -301,12 +311,21 @@ class Block {
 private:
     std::string _label;
     std::vector<std::shared_ptr<Instruct>> _instructions;
+    std::vector<std::string> _next;
+    bool _ended;
 public:
     Block(std::string label) : _label(label) {}
     std::string label() { return _label; }
     std::vector<std::shared_ptr<Instruct>>& instructions() { return _instructions; }
+    void push_back(std::shared_ptr<Instruct> instruct) { 
+        if (!_ended) {
+            _instructions.push_back(instruct); 
+        }
+    }
     std::shared_ptr<Instruct>& last() { return *(_instructions.end() - 1); }
     std::string to_string();
+    std::vector<std::string>& next() { return _next; }
+    bool& ended() { return _ended; }
 };
 
 class Function {
@@ -442,7 +461,7 @@ public:
     void addLtInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right);
     void addLeInstruct(std::shared_ptr<Value> reg, std::shared_ptr<Value> left, std::shared_ptr<Value> right);
     void addRetInstruct(std::shared_ptr<Value> ret_value);
-    void addCallInstruct(std::shared_ptr<PtrValue> result, std::shared_ptr<Function> function, std::vector<std::shared_ptr<Value>> params);
+    void addCallInstruct(std::shared_ptr<Value> result, std::shared_ptr<Function> function, std::vector<std::shared_ptr<Value>> params);
     void addGepInstruct(std::shared_ptr<PtrValue> result, std::shared_ptr<PtrValue> ptr, std::shared_ptr<IntConstValue> elem, std::shared_ptr<IntConstValue> offset);
     void addBrInstruct(std::string label);
     void addCondBrInstruct(std::shared_ptr<Value> cond, std::string true_label, std::string false_label);

@@ -1,6 +1,7 @@
 #include "blang.hpp"
 #include "lexer.hpp"
 #include "logger.hpp"
+#include "optimizer.hpp"
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -13,7 +14,8 @@ Blang::Blang() :
     _lexer(_logger),
     _parser(_logger),
     _syntax_checker(_logger),
-    _ir_generator(_logger)
+    _ir_generator(_logger),
+    _optimizer()
 {}
 
 std::shared_ptr<std::vector<char>> Blang::load_file(const std::string& filename) {
@@ -51,6 +53,8 @@ std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
     auto global_table = _syntax_checker.check(comp_unit);
 
     auto llvm_module = _ir_generator.gen(global_table);
+
+    //auto optimized_module = _optimizer.optim(llvm_module);
 
     auto output = llvm_module->to_string();
 

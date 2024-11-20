@@ -224,12 +224,16 @@ public:
 
 class PtrValue : public Value {
 private:
+    bool _global;
     std::string _ident;
 public:
-    PtrValue(Type* type, std::string ident) : Value(type), _ident(ident) {}
-    virtual std::string to_string() { return getType()->to_string() + "* %" + _ident; }
-    virtual std::string ident() { return "%" + _ident; }
-    std::string def() { return "@" + _ident; }
+    PtrValue(Type* type, bool global, std::string ident) : Value(type), _global(global), _ident(ident) {}
+    std::string flag() { return _global ? "@" : "%"; }
+    virtual std::string to_string() { return getType()->to_string() + "* " + flag() + _ident; }
+    virtual std::string ident() {
+        return flag() + _ident; 
+    }
+    std::string def() { return flag() + _ident; }
 };
 
 }

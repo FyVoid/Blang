@@ -38,10 +38,10 @@ void IrGenerator::setGlobalVar() {
         auto ident = var->ident();
         if (Type::is_same(type, IntType::get())) {
             value = std::make_shared<IntConstValue>(*(var->get<int32_t>()));
-            ptr = std::make_shared<PtrValue>(var->type(), ident);
+            ptr = std::make_shared<PtrValue>(var->type(), true, ident);
         } else if (Type::is_same(type, CharType::get())) {
             value = std::make_shared<CharConstValue>(*(var->get<char>()));
-            ptr = std::make_shared<PtrValue>(var->type(), ident);
+            ptr = std::make_shared<PtrValue>(var->type(), true, ident);
         } else if (auto array_t = dynamic_cast<ArrayType*>(type); array_t) {
             if (Type::is_same(array_t->type(), IntType::get())) {
                 std::vector<std::shared_ptr<Value>> vec{};
@@ -50,7 +50,7 @@ void IrGenerator::setGlobalVar() {
                     vec.push_back(std::make_shared<IntConstValue>(array[i]));
                 }
                 value = std::make_shared<ArrayValue>(array_t, vec);
-                ptr = std::make_shared<PtrValue>(var->type(), ident);
+                ptr = std::make_shared<PtrValue>(var->type(), true, ident);
             } else if (Type::is_same(array_t->type(), CharType::get())) {
                 std::vector<std::shared_ptr<Value>> vec{};
                 auto array = var->get<char>();
@@ -58,7 +58,7 @@ void IrGenerator::setGlobalVar() {
                     vec.push_back(std::make_shared<CharConstValue>(array[i]));
                 }
                 value = std::make_shared<ArrayValue>(array_t, vec);
-                ptr = std::make_shared<PtrValue>(var->type(), ident);
+                ptr = std::make_shared<PtrValue>(var->type(), true, ident);
             }
         }
 
@@ -127,9 +127,9 @@ void IrGenerator::visit(DeclNode& node) {
         auto type = var->type();
         auto ident = _factory->next_reg();
         if (Type::is_same(type, IntType::get())) {
-            ptr = std::make_shared<PtrValue>(var->type(), ident);
+            ptr = std::make_shared<PtrValue>(var->type(), false, ident);
         } else if (Type::is_same(type, CharType::get())) {
-            ptr = std::make_shared<PtrValue>(var->type(), ident);
+            ptr = std::make_shared<PtrValue>(var->type(), false, ident);
         } else if (auto array_t = dynamic_cast<ArrayType*>(type); array_t) {
             if (Type::is_same(array_t->type(), IntType::get())) {
                 std::vector<std::shared_ptr<Value>> vec{};
@@ -137,14 +137,14 @@ void IrGenerator::visit(DeclNode& node) {
                 for (size_t i = 0; i < array_t->length(); i++) {
                     vec.push_back(std::make_shared<IntConstValue>(array[i]));
                 }
-                ptr = std::make_shared<PtrValue>(var->type(), ident);
+                ptr = std::make_shared<PtrValue>(var->type(), false, ident);
             } else if (Type::is_same(array_t->type(), CharType::get())) {
                 std::vector<std::shared_ptr<Value>> vec{};
                 auto array = var->get<char>();
                 for (size_t i = 0; i < array_t->length(); i++) {
                     vec.push_back(std::make_shared<CharConstValue>(array[i]));
                 }
-                ptr = std::make_shared<PtrValue>(var->type(), ident);
+                ptr = std::make_shared<PtrValue>(var->type(), false, ident);
             }
         }
 
@@ -159,16 +159,19 @@ void IrGenerator::visit(DeclNode& node) {
             } else if (Type::is_same(type, CharType::get())) {
                 def->init_val()->exp()->accept(*this);
                 auto result = _module->current_block()->last()->reg();
-                auto reg = std::make_shared<CharValue>(_factory->next_reg());
-                _factory->addTruncInstruct(reg, result);
-                _factory->addStoreInstruct(reg, ptr);
+                if (!Type::is_same(result->getType(), CharType::get())) {
+                    auto reg = std::make_shared<CharValue>(_factory->next_reg());
+                    _factory->addTruncInstruct(reg, result);
+                    result = reg;
+                }
+                _factory->addStoreInstruct(result, ptr);
             } else if (auto array_t = dynamic_cast<ArrayType*>(type); array_t) {
                 if (Type::is_same(array_t->type(), IntType::get())) {
                     int iter = 0;
                     for (auto& exp : def->init_val()->exps()) {
                         exp->accept(*this);
                         auto result = _module->current_block()->last()->reg();
-                        auto gep_ptr = std::make_shared<PtrValue>(array_t, _factory->next_reg());
+                        auto gep_ptr = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
                         auto elem = std::make_shared<IntConstValue>(0);
                         auto offset = std::make_shared<IntConstValue>(iter);
                         iter++;
@@ -180,7 +183,7 @@ void IrGenerator::visit(DeclNode& node) {
                     for (auto& exp : def->init_val()->exps()) {
                         exp->accept(*this);
                         auto result = _module->current_block()->last()->reg();
-                        auto gep_ptr = std::make_shared<PtrValue>(array_t, _factory->next_reg());
+                        auto gep_ptr = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
                         auto elem = std::make_shared<IntConstValue>(0);
                         auto offset = std::make_shared<IntConstValue>(iter);
                         iter++;
@@ -207,12 +210,6 @@ void IrGenerator::visit(UnaryExpNode& node) {
         node.primary_exp()->accept(*this);
     } else if (!node.ident().empty()) {
         auto func = _current_table->getFunc(node.ident());
-        std::shared_ptr<PtrValue> ptr;
-        if (Type::is_same(func->return_type(), VoidType::get())) {
-            ptr = nullptr;
-        } else {
-            ptr = std::make_shared<PtrValue>(func->return_type(), _factory->next_reg());
-        }
 
         std::vector<std::shared_ptr<Value>> params{};
         if (node.func_rparams()) {
@@ -222,25 +219,75 @@ void IrGenerator::visit(UnaryExpNode& node) {
             }
         }
 
-        _factory->addCallInstruct(ptr, func->function(), params);
+        std::shared_ptr<Value> ret;
+        if (Type::is_same(func->return_type(), VoidType::get())) {
+            ret = nullptr;
+        } else {
+            if (Type::is_same(func->return_type(), IntType::get())) {
+                ret = std::make_shared<IntValue>(_factory->next_reg());
+            } else if (Type::is_same(func->return_type(), CharType::get())) {
+                ret = std::make_shared<CharValue>(_factory->next_reg());
+            }
+        }
+
+        _factory->addCallInstruct(ret, func->function(), params);
     }
 }
 
 void IrGenerator::visit(BinaryExpNode& node) {
+    auto result_bw = 0;
+    switch (node.op()) {
+        case entities::OP_ADD:
+        case entities::OP_MINUS:
+        case entities::OP_MUL:
+        case entities::OP_MOD:
+        case entities::OP_DIV:
+            result_bw = 32;
+            break;
+        case entities::OP_AND:
+        case entities::OP_EQ:
+        case entities::OP_GE:
+        case entities::OP_GT:
+        case entities::OP_LE:
+        case entities::OP_LT:
+        case entities::OP_NEQ:
+        case entities::OP_OR:
+            result_bw = 1;
+            break;
+        default:
+            break;
+    }
+
     node.left()->accept(*this);
     auto left = _module->current_block()->last()->reg();
-    if (Type::is_same(left->getType(), CharType::get())) {
-        auto reg = std::make_shared<IntValue>(_factory->next_reg());
-        _factory->addSextInstruct(reg, left);
-        left = _module->current_block()->last()->reg();
+    if (result_bw == 32) {
+        if (Type::is_same(left->getType(), CharType::get())) {
+            auto reg = std::make_shared<IntValue>(_factory->next_reg());
+            _factory->addSextInstruct(reg, left);
+            left = _module->current_block()->last()->reg();
+        }
+    } else if (result_bw == 1) {
+        if (Type::is_same(left->getType(), IntType::get()) || Type::is_same(left->getType(), CharType::get())) {
+            auto reg = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addTruncInstruct(reg, left);
+            left = _module->current_block()->last()->reg();
+        }
     }
 
     node.right()->accept(*this);
     auto right = _module->current_block()->last()->reg();
-    if (Type::is_same(right->getType(), CharType::get())) {
-        auto reg = std::make_shared<IntValue>(_factory->next_reg());
-        _factory->addSextInstruct(reg, right);
-        right = _module->current_block()->last()->reg();
+    if (result_bw == 32) {
+        if (Type::is_same(right->getType(), CharType::get())) {
+            auto reg = std::make_shared<IntValue>(_factory->next_reg());
+            _factory->addSextInstruct(reg, right);
+            right = _module->current_block()->last()->reg();
+        }
+    } else if (result_bw == 1) {
+        if (Type::is_same(right->getType(), IntType::get()) || Type::is_same(right->getType(), CharType::get())) {
+            auto reg = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addTruncInstruct(reg, right);
+            right = _module->current_block()->last()->reg();
+        }
     }
     
     auto regn = _factory->next_reg();
@@ -314,20 +361,48 @@ void IrGenerator::visit(PrimaryExpNode& node) {
     }
 }
 
+// load value of this node to a temp register
 void IrGenerator::visit(LValNode& node) {
     auto var = _current_table->getVar(node.ident());
+    Type* type;
+    std::shared_ptr<Value> value;
     if (auto array_t = dynamic_cast<ArrayType*>(var->type()); array_t) {
-        node.exp()->accept(*this);
-        auto offset = _module->current_block()->last()->reg();
-        auto result = std::make_shared<PtrValue>(array_t->type(), _factory->next_reg());
+        std::shared_ptr<Value> offset;
+        if (node.exp()) {
+            node.exp()->accept(*this);
+            offset = _module->current_block()->last()->reg();
+        } else {
+            offset = std::make_shared<IntConstValue>(0);
+        }
+        auto result = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
         auto elem = std::make_shared<IntConstValue>(0);
         _factory->addGepInstruct(result, var->value(), elem, std::static_pointer_cast<IntConstValue>(offset));
-    } else {
-        if (Type::is_same(var->type(), IntType::get())) {
-            _factory->addLoadInstruct(var->value(), std::make_shared<IntValue>(_factory->next_reg()));
-        } else if (Type::is_same(var->type(), CharType::get())) {
-            _factory->addLoadInstruct(var->value(), std::make_shared<CharValue>(_factory->next_reg()));
+        if (!node.exp()) {
+            return ;
         }
+        type = array_t->type();
+        value = result;
+    } else if (auto ptr_t = dynamic_cast<PtrType*>(var->type()); ptr_t) {
+        std::shared_ptr<Value> offset;
+        if (node.exp()) {
+            node.exp()->accept(*this);
+            offset = _module->current_block()->last()->reg();
+        } else {
+            offset = std::make_shared<IntConstValue>(0);
+        }
+        auto result = std::make_shared<PtrValue>(ptr_t->next(), false, _factory->next_reg());
+        _factory->addGepInstruct(result, var->value(), nullptr, std::static_pointer_cast<IntConstValue>(offset));
+        type = ptr_t->next();
+        value = result;
+    } else {
+        type = var->type();
+        value = var->value();
+    }
+
+    if (Type::is_same(type, IntType::get())) {
+        _factory->addLoadInstruct(value, std::make_shared<IntValue>(_factory->next_reg()));
+    } else if (Type::is_same(type, CharType::get())) {
+        _factory->addLoadInstruct(value, std::make_shared<CharValue>(_factory->next_reg()));
     }
 }
 
@@ -346,6 +421,9 @@ void IrGenerator::visit(ValueNode& node) {
 void IrGenerator::visit(FuncDefNode& node) {
     auto tmp = _current_table;
     _current_table = std::make_shared<BlockSymbolTable>(_current_table);
+    if (node.params()) {
+        node.params()->accept(*this);
+    }
     node.block()->accept(*this);
     if (Type::is_same(node.type(), VoidType::get())) {
         _factory->addRetInstruct(nullptr);
@@ -375,24 +453,47 @@ void IrGenerator::visit(BlockItemNode& node) {
 }
 
 void IrGenerator::visit(AssignStmtNode& node) {
-    auto var = _current_table->getVar(node.lval()->ident());
-    auto reg = var->value();
+    auto lval = node.lval();
+    auto var = _current_table->getVar(lval->ident());
+    Type* type;
+    std::shared_ptr<Value> ptr;
+    if (auto array_t = dynamic_cast<ArrayType*>(var->type()); array_t) {
+        lval->exp()->accept(*this);
+        auto offset = _module->current_block()->last()->reg();
+        auto result = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
+        auto elem = std::make_shared<IntConstValue>(0);
+        _factory->addGepInstruct(result, var->value(), elem, std::static_pointer_cast<IntConstValue>(offset));
+        type = array_t->type();
+        ptr = result;
+    } else if (auto ptr_t = dynamic_cast<PtrType*>(var->type()); ptr_t) {
+        lval->exp()->accept(*this);
+        auto offset = _module->current_block()->last()->reg();
+        auto result = std::make_shared<PtrValue>(ptr_t->next(), false, _factory->next_reg());
+        auto elem = std::make_shared<IntConstValue>(0);
+        _factory->addGepInstruct(result, var->value(), elem, std::static_pointer_cast<IntConstValue>(offset));
+        type = ptr_t->next();
+        ptr = result;
+    } else {
+        type = var->type();
+        ptr = var->value();
+    }
+
     node.rval()->accept(*this);
     auto value = _module->current_block()->last()->reg();
 
-    if (!Type::is_same(reg->getType(), value->getType())) {
-        if (Type::is_same(reg->getType(), CharType::get())) {
+    if (!Type::is_same(type, value->getType())) {
+        if (Type::is_same(type, CharType::get())) {
             auto result = std::make_shared<CharValue>(_factory->next_reg());
             _factory->addTruncInstruct(result, value);
             value = result;
-        } else if (Type::is_same(reg->getType(), IntType::get())) {
+        } else if (Type::is_same(type, IntType::get())) {
             auto result = std::make_shared<IntValue>(_factory->next_reg());
             _factory->addSextInstruct(result, value);
             value = result;
         }
     }
 
-    _factory->addStoreInstruct(value, std::dynamic_pointer_cast<PtrValue>(reg));
+    _factory->addStoreInstruct(value, std::dynamic_pointer_cast<PtrValue>(ptr));
 }
 
 void IrGenerator::visit(ReturnStmtNode& node) {
@@ -446,21 +547,31 @@ void IrGenerator::visit(PrintfStmtNode& node) {
             }
             str_vec.push_back(std::make_shared<CharConstValue>('\0'));
             str_array = std::make_shared<ArrayValue>(type, str_vec);
-            auto alloca = std::make_shared<PtrValue>(type, _factory->next_reg());
+            auto alloca = std::make_shared<PtrValue>(type, false, _factory->next_reg());
             _factory->addAllocaInstruct(alloca);
             _factory->addStoreInstruct(str_array, alloca);
-            auto ptr = std::make_shared<PtrValue>(CharType::get(), _factory->next_reg());
+            auto ptr = std::make_shared<PtrValue>(CharType::get(), false, _factory->next_reg());
             _factory->addGepInstruct(ptr, alloca, std::make_shared<IntConstValue>(0), std::make_shared<IntConstValue>(0));
             _factory->addCallExternalInstruct(nullptr, "putstr", {ptr});
         }
         if (d_next < c_next && d_next != std::string::npos) {
             params[param_count++]->accept(*this);
             auto reg = _module->current_block()->last()->reg();
+            if (!Type::is_same(reg->getType(), IntType::get())) {
+                auto result = std::make_shared<IntValue>(_factory->next_reg());
+                _factory->addSextInstruct(result, reg);
+                reg = result;
+            }
             _factory->addCallExternalInstruct(nullptr, "putint", {reg});
             pos = next + 2;
         } else if (c_next < d_next && c_next != std::string::npos) {
             params[param_count++]->accept(*this);
             auto reg = _module->current_block()->last()->reg();
+            if (!Type::is_same(reg->getType(), IntType::get())) {
+                auto result = std::make_shared<IntValue>(_factory->next_reg());
+                _factory->addSextInstruct(result, reg);
+                reg = result;
+            }
             _factory->addCallExternalInstruct(nullptr, "putchar", {reg});
             pos = next + 2;
         }
@@ -511,6 +622,10 @@ void IrGenerator::visit(ForStmtNode& node) {
     _module->current_function()->addBlock("for_body" + forn);
     auto for_body = _module->current_function()->current_block();
     node.stmt()->accept(*this);
+    _factory->addBrInstruct("for_out" + forn);
+
+    _module->current_function()->addBlock("for_out" + forn);
+    auto for_out = _module->current_function()->current_block();
     if (node.for_out()) {
         node.for_out()->accept(*this);
     }
@@ -532,36 +647,23 @@ void IrGenerator::visit(IfStmtNode& node) {
         _factory->addTruncInstruct(result, tmp);
     }
 
-    _module->current_function()->addBlock("if_body" + ifn);
-    auto if_body = _module->current_block();
-
-    std::shared_ptr<Block> else_body;
     if (node.else_stmt()) {
-        _module->current_function()->addBlock("else_body" + ifn);
-        else_body = _module->current_block();
-    }
-
-    _module->current_function()->addBlock("if_end" + ifn);
-    auto if_end = _module->current_block(); 
-
-    _module->current_function()->setBlock(if_entry);
-    if (node.else_stmt()) {
-        _factory->addCondBrInstruct(result, if_body->label(), else_body->label());
+        _factory->addCondBrInstruct(result, "if_body" + ifn, "else_body" + ifn);
     } else {
-        _factory->addCondBrInstruct(result, if_body->label(), if_end->label());
+        _factory->addCondBrInstruct(result, "if_body" + ifn, "if_end" + ifn);
     }
 
-    _module->current_function()->setBlock(if_body);
+    _module->current_function()->addBlock("if_body" + ifn);
     node.if_stmt()->accept(*this);
     _factory->addBrInstruct("if_end" + ifn);
 
     if (node.else_stmt()) {
-        _module->current_function()->setBlock(else_body);
+        _module->current_function()->addBlock("else_body" + ifn);
         node.else_stmt()->accept(*this);
         _factory->addBrInstruct("if_end" + ifn);
     }
 
-    _module->current_function()->setBlock(if_end);
+    _module->current_function()->addBlock("if_end" + ifn);
 }
 
 void IrGenerator::visit(BlockStmtNode& node) {
@@ -594,7 +696,31 @@ void IrGenerator::visit(RValNode& node) {
 
 void IrGenerator::visit(FuncRParamsNode& node) {}
 
-void IrGenerator::visit(FuncFParamsNode& node) {}
+void IrGenerator::visit(FuncFParamsNode& node) {
+    for (auto& [type, ident] : node.params()) {
+        std::shared_ptr<Var> var;
+        std::string log_type = "";
+        if (auto ptr_t = dynamic_cast<PtrType*>(type); ptr_t) {
+            auto base_t = ptr_t->next();
+            if (Type::is_same(base_t, IntType::get())) {
+                var = Var::getIntPtr(ident, false);
+                var->value() = std::make_shared<PtrValue>(base_t, false, ident);
+            } else if (Type::is_same(base_t, CharType::get())) {
+                var = Var::getCharPtr(ident, false);
+                var->value() = std::make_shared<PtrValue>(base_t, false, ident);
+            }
+        } else {
+            if (Type::is_same(type, IntType::get())) {
+                var = Var::getInt(ident, false);
+                var->value() = std::make_shared<PtrValue>(type, false, ident);
+            } else if (Type::is_same(type, CharType::get())) {
+                var = Var::getChar(ident, false);
+                var->value() = std::make_shared<PtrValue>(type, false, ident);
+            }
+        }
+        _current_table->addVar(var);
+    }
+}
 
 
 }
