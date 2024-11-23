@@ -5,7 +5,7 @@ out:
 	clang link.s -o main
 
 run: out
-	./main
+	cat in.txt | ./main
 
 clean:
 	rm link.ll link.s main

@@ -96,10 +96,11 @@ public:
 
 class SymbolTable {
 protected:
+    std::vector<std::string> _symbol_order;
     std::map<std::string, std::shared_ptr<Symbol>> _symbols;
     static uint32_t _block_counter;
     const uint32_t _blockn;
-    SymbolTable() : _symbols(std::map<std::string, std::shared_ptr<Symbol>>()), _blockn(_block_counter) {
+    SymbolTable() : _symbol_order({}), _symbols({}), _blockn(_block_counter) {
         _block_counter++;
     }
 protected:

@@ -3,6 +3,7 @@
 
 #include "type.hpp"
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -18,7 +19,7 @@ enum InstructType {
     INSTRUCT_AND, INSTRUCT_OR, INSTRUCT_EQ, INSTRUCT_NEQ,
     INSTRUCT_GE, INSTRUCT_GT, INSTRUCT_LE, INSTRUCT_LT,
     INSTRUCT_ICMP, INSTRUCT_BR,
-    INSTRUCT_SEXT, INSTRUCT_TRUNC,
+    INSTRUCT_SEXT, INSTRUCT_ZEXT, INSTRUCT_TRUNC, 
 };
 
 class Instruct {
@@ -294,6 +295,19 @@ public:
     }
 };
 
+class ZextInstruct : public Instruct {
+private:
+    std::shared_ptr<Value> _result;
+    std::shared_ptr<Value> _operand;
+public:
+    ZextInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand) :
+        Instruct(INSTRUCT_ZEXT), _result(result), _operand(operand) {}
+    virtual std::shared_ptr<Value> reg() { return _result; }
+    virtual std::string to_string() {
+        return _result->ident() + " = zext " + _operand->to_string() + " to " + _result->getType()->to_string();
+    }
+};
+
 class TruncInstruct : public Instruct {
 private:
     std::shared_ptr<Value> _result;
@@ -314,7 +328,7 @@ private:
     std::vector<std::string> _next;
     bool _ended;
 public:
-    Block(std::string label) : _label(label) {}
+    Block(std::string label) : _label(label), _instructions({}), _next({}), _ended(false) {}
     std::string label() { return _label; }
     std::vector<std::shared_ptr<Instruct>>& instructions() { return _instructions; }
     void push_back(std::shared_ptr<Instruct> instruct) { 
@@ -322,7 +336,12 @@ public:
             _instructions.push_back(instruct); 
         }
     }
-    std::shared_ptr<Instruct>& last() { return *(_instructions.end() - 1); }
+    std::shared_ptr<Instruct>& last() { 
+        if (_instructions.empty()) {
+            throw std::runtime_error(_label + "instruction is empty!");
+        }
+        return *(_instructions.end() - 1); 
+    }
     std::string to_string();
     std::vector<std::string>& next() { return _next; }
     bool& ended() { return _ended; }
@@ -338,7 +357,7 @@ private:
     uint64_t _reg_iter;
 public:
     Function(Type* ret_type, std::string ident, std::vector<std::tuple<Type*, std::string>> params) :
-        _ret_type(ret_type), _ident(ident), _params(params), _blocks({}) {}
+        _ret_type(ret_type), _ident(ident), _params(params), _blocks({}), _current_block(nullptr), _reg_iter(0) {}
     Type* ret_type() { return _ret_type; }
     std::string ident() { return _ident; }
     std::vector<std::tuple<Type*, std::string>> params() { return _params; }
@@ -420,7 +439,7 @@ private:
     std::map<std::string, std::shared_ptr<Function>> _functions;
     std::shared_ptr<Function> _current_function;
 public:
-    IrModule() : _global({}) {}
+    IrModule() : _global({}), _functions({}), _current_function(nullptr) {}
     std::vector<std::shared_ptr<Instruct>>& global() { return _global; }
     std::map<std::string, std::shared_ptr<Function>>& functions() { return _functions; }
     std::shared_ptr<Function> current_function() { return _current_function; }
@@ -439,7 +458,7 @@ private:
     std::shared_ptr<IrModule> _module;
     uint64_t _block_iter;
 public:
-    IrFactory(std::shared_ptr<IrModule> module) : _module(module) {}
+    IrFactory(std::shared_ptr<IrModule> module) : _module(module), _block_iter(0) {}
     inline std::string next_reg() { return _module->current_function()->next_reg(); }
     inline std::string next_block() { return std::to_string(_block_iter++); }
     void addFunction(Type* ret_type, std::string ident, std::vector<std::tuple<Type*, std::string>> params);
@@ -466,6 +485,7 @@ public:
     void addBrInstruct(std::string label);
     void addCondBrInstruct(std::shared_ptr<Value> cond, std::string true_label, std::string false_label);
     void addSextInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand);
+    void addZextInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand);
     void addTruncInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand);
     void addCallExternalInstruct(std::shared_ptr<Value> result, std::string function, std::vector<std::shared_ptr<Value>> params);
 };

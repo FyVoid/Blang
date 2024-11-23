@@ -49,6 +49,7 @@ private:
         Type* _type;
         std::vector<std::tuple<Type*, std::string>> _params;
         std::shared_ptr<BlockSymbolTable> _func_block;
+        bool _global;
         template<typename T>
         std::vector<T> getInitVal(InitValNode& node) {
             std::vector<T> ret{};
@@ -75,14 +76,14 @@ private:
                 auto length = evaluate(*node.array_exp(), _current_table);
                 if (Type::is_same(base_t, IntType::get())) {
                     var = Var::getIntArray(node.ident(), node.is_const(), length);
-                    if (node.is_const()) {
+                    if (node.is_const() || (_global && node.init_val())) {
                         auto init_val = getInitVal<int32_t>(*node.init_val());
                         memcpy(var->get<int32_t>(), init_val.data(), sizeof(int32_t) * std::min(length, static_cast<int32_t>(init_val.size())));
                     }
                     log_type += "IntArray";
                 } else if (Type::is_same(base_t, CharType::get())) {
                     var = Var::getCharArray(node.ident(), node.is_const(), length);
-                    if (node.is_const()) {
+                    if (node.is_const() || (_global && node.init_val())) {
                         auto init_val = getInitVal<char>(*node.init_val());
                         memcpy(var->get<char>(), init_val.data(), sizeof(char) * std::min(length, static_cast<int32_t>(init_val.size())));
                     }
@@ -91,14 +92,14 @@ private:
             } else {
                 if (Type::is_same(base_t, IntType::get())) {
                     var = Var::getInt(node.ident(), node.is_const());
-                    if (node.is_const()) {
+                    if (node.is_const() || (_global && node.init_val())) {
                         auto init_val = getInitVal<int32_t>(*node.init_val());
                         memcpy(var->get<int32_t>(), init_val.data(), sizeof(int32_t));
                     }
                     log_type += "Int";
                 } else if (Type::is_same(base_t, CharType::get())) {
                     var = Var::getChar(node.ident(), node.is_const());
-                    if (node.is_const()) {
+                    if (node.is_const() || (_global && node.init_val())) {
                         auto init_val = getInitVal<char>(*node.init_val());
                         memcpy(var->get<char>(), init_val.data(), sizeof(char));
                     }
@@ -113,6 +114,8 @@ private:
         }
         virtual void visit(FuncDefNode& node) override {
             Type* type = node.type();
+            auto tmp = _global;
+            _global = false;
             _func_block = std::make_shared<BlockSymbolTable>(_current_table);
             if (node.params()) {
                 node.params()->accept(*this);
@@ -134,6 +137,8 @@ private:
             } else {
                 _logger->log(std::make_shared<SyntaxLog>(node.line(), _current_table->blockn(), func->ident(), log_type));
             }
+            
+            _global = tmp;
         }
         virtual void visit(FuncFParamsNode& node) override {
             for (auto& [type, ident] : node.params()) {
@@ -166,10 +171,11 @@ private:
         }
     public:
         DefChecker(std::shared_ptr<Logger> logger) :
-            Checker(logger) {}
+            Checker(logger), _global(true) {}
         void check(Type* type, DefNode& node, std::shared_ptr<SymbolTable> table) {
             _current_table = table;
             _type = type;
+            _global = true;
             node.accept(*this);
         }
         std::shared_ptr<BlockSymbolTable> check(FuncDefNode& node, std::shared_ptr<SymbolTable> table) {

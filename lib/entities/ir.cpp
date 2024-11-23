@@ -174,6 +174,10 @@ void IrFactory::addSextInstruct(std::shared_ptr<Value> result, std::shared_ptr<V
     _module->current_block()->push_back(std::make_shared<SextInstruct>(result, operand));
 }
 
+void IrFactory::addZextInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand) {
+    _module->current_block()->push_back(std::make_shared<ZextInstruct>(result, operand));
+}
+
 void IrFactory::addTruncInstruct(std::shared_ptr<Value> result, std::shared_ptr<Value> operand) {
     _module->current_block()->push_back(std::make_shared<TruncInstruct>(result, operand));
 }

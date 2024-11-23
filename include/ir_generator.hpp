@@ -23,8 +23,8 @@ private:
     std::shared_ptr<SymbolTable> _current_table;
     std::shared_ptr<IrModule> _module;
     std::shared_ptr<IrFactory> _factory;
-    std::string _for_end_label;
-    std::string _for_in_label;
+    std::vector<std::string> _for_end_labels = {};
+    std::vector<std::string> _for_out_labels = {};
     static int32_t evaluate(ExpNode& node, std::shared_ptr<SymbolTable> current_table) {
         static Evaluator evaluator{};
         try {

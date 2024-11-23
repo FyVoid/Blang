@@ -62,27 +62,18 @@ std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
     ir_out << output;
     ir_out.close();
 
-    // std::ofstream log_out("./symbol.txt");
-    // for (auto& log : _logger->syntax_logs()) {
-    //     log_out << log->to_string() << std::endl;
-    //     if (_logger->errors().empty()) {
-    //         std::cout << log->to_string() << std::endl;
+    // _logger->sortError();
+    // std::ofstream error_out("./error.txt");
+    // uint32_t last_line = -1;
+    // for (auto& error : _logger->errors()) {
+    //     if (last_line == error->line) {
+    //         continue;
     //     }
+    //     error_out << error->to_string() << std::endl;
+    //     std::cout << error->to_string() << std::endl;
+    //     last_line = error->line;
     // }
-    // log_out.close();
-
-    _logger->sortError();
-    std::ofstream error_out("./error.txt");
-    uint32_t last_line = -1;
-    for (auto& error : _logger->errors()) {
-        if (last_line == error->line) {
-            continue;
-        }
-        error_out << error->to_string() << std::endl;
-        std::cout << error->to_string() << std::endl;
-        last_line = error->line;
-    }
-    error_out.close();
+    // error_out.close();
 
     auto ret = std::make_shared<std::vector<char>>();
 

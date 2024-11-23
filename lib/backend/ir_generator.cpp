@@ -155,11 +155,16 @@ void IrGenerator::visit(DeclNode& node) {
             if (Type::is_same(type, IntType::get())) {
                 def->init_val()->exp()->accept(*this);
                 auto result = _module->current_block()->last()->reg();
+                if (Type::is_same(result->getType(), CharType::get())) {
+                    auto tmp = std::make_shared<IntValue>(_factory->next_reg());
+                    _factory->addSextInstruct(tmp, result);
+                    result = tmp;
+                }
                 _factory->addStoreInstruct(result, ptr);
             } else if (Type::is_same(type, CharType::get())) {
                 def->init_val()->exp()->accept(*this);
                 auto result = _module->current_block()->last()->reg();
-                if (!Type::is_same(result->getType(), CharType::get())) {
+                if (Type::is_same(result->getType(), IntType::get())) {
                     auto reg = std::make_shared<CharValue>(_factory->next_reg());
                     _factory->addTruncInstruct(reg, result);
                     result = reg;
@@ -171,6 +176,11 @@ void IrGenerator::visit(DeclNode& node) {
                     for (auto& exp : def->init_val()->exps()) {
                         exp->accept(*this);
                         auto result = _module->current_block()->last()->reg();
+                        if (Type::is_same(result->getType(), CharType::get())) {
+                            auto tmp = std::make_shared<IntValue>(_factory->next_reg());
+                            _factory->addSextInstruct(tmp, result);
+                            result = tmp;
+                        }
                         auto gep_ptr = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
                         auto elem = std::make_shared<IntConstValue>(0);
                         auto offset = std::make_shared<IntConstValue>(iter);
@@ -179,19 +189,34 @@ void IrGenerator::visit(DeclNode& node) {
                         _factory->addStoreInstruct(result, gep_ptr);
                     }
                 } else if (Type::is_same(array_t->type(), CharType::get())) {
-                    int iter = 0;
-                    for (auto& exp : def->init_val()->exps()) {
-                        exp->accept(*this);
-                        auto result = _module->current_block()->last()->reg();
-                        auto gep_ptr = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
-                        auto elem = std::make_shared<IntConstValue>(0);
-                        auto offset = std::make_shared<IntConstValue>(iter);
-                        iter++;
-                        _factory->addGepInstruct(gep_ptr, ptr, elem, offset);
-                        auto reg = std::make_shared<CharValue>(_factory->next_reg());
-                        _factory->addSextInstruct(reg, result);
-                        result = _module->current_block()->last()->reg();
-                        _factory->addStoreInstruct(result, gep_ptr);
+                    if (def->init_val()->type() == entities::INIT_ARRAY) {
+                        int iter = 0;
+                        for (auto& exp : def->init_val()->exps()) {
+                            exp->accept(*this);
+                            auto result = _module->current_block()->last()->reg();
+                            if (Type::is_same(result->getType(), IntType::get())) {
+                                auto tmp = std::make_shared<CharValue>(_factory->next_reg());
+                                _factory->addTruncInstruct(tmp, result);
+                                result = tmp;
+                            }
+                            auto gep_ptr = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
+                            auto elem = std::make_shared<IntConstValue>(0);
+                            auto offset = std::make_shared<IntConstValue>(iter);
+                            iter++;
+                            _factory->addGepInstruct(gep_ptr, ptr, elem, offset);
+                            _factory->addStoreInstruct(result, gep_ptr);
+                        }
+                    } else if (def->init_val()->type() == entities::INIT_STRING) {
+                        int iter = 0;
+                        for (auto& ch : def->init_val()->str()) {
+                            auto gep_ptr = std::make_shared<PtrValue>(array_t->type(), false, _factory->next_reg());
+                            auto elem = std::make_shared<IntConstValue>(0);
+                            auto offset = std::make_shared<IntConstValue>(iter);
+                            iter++;
+                            _factory->addGepInstruct(gep_ptr, ptr, elem, offset);
+                            auto value = std::make_shared<CharConstValue>(ch);
+                            _factory->addStoreInstruct(value, gep_ptr);
+                        }
                     }
                 }
             }
@@ -204,33 +229,83 @@ void IrGenerator::visit(DefNode& node) {}
 void IrGenerator::visit(InitValNode& node) {}
 
 void IrGenerator::visit(UnaryExpNode& node) {
+    std::shared_ptr<Value> result;
     if (node.unary_exp()) {
         node.unary_exp()->accept(*this);
+        switch (node.op()) {
+            case entities::OP_NOT: {
+                auto reg = _module->current_block()->last()->reg();
+                if (!Type::is_same(reg->getType(), BoolType::get())) {
+                    auto tmp = std::make_shared<BoolValue>(_factory->next_reg());
+                    if (Type::is_same(reg->getType(), IntType::get())) {
+                        _factory->addNeqInstruct(tmp, reg, std::make_shared<IntConstValue>(0));
+                    } else if (Type::is_same(reg->getType(), CharType::get())) {
+                        _factory->addNeqInstruct(tmp, reg, std::make_shared<CharConstValue>(0));
+                    }
+                    reg = tmp;
+                }
+                result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addEqInstruct(result, reg, std::make_shared<BoolConstValue>(0));
+            }
+            break;
+            case entities::OP_MINUS: {
+                auto reg = _module->current_block()->last()->reg();
+                std::shared_ptr<Value> from;
+                if (Type::is_same(reg->getType(), IntType::get())) {
+                    result = std::make_shared<IntValue>(_factory->next_reg());
+                    from = std::make_shared<IntConstValue>(0);
+                } else if (Type::is_same(reg->getType(), CharType::get())) {
+                    result = std::make_shared<CharValue>(_factory->next_reg());
+                    from = std::make_shared<CharConstValue>(0);
+                } else if (Type::is_same(reg->getType(), BoolType::get())) {
+                    result = std::make_shared<BoolValue>(_factory->next_reg());
+                    from = std::make_shared<BoolConstValue>(0);
+                }
+                _factory->addSubInstruct(result, from, reg);
+            }
+            default:
+            break;
+        }
     } else if (node.primary_exp()) {
         node.primary_exp()->accept(*this);
+        result = _module->current_block()->last()->reg();
     } else if (!node.ident().empty()) {
         auto func = _current_table->getFunc(node.ident());
-
+        auto func_params = func->params();
         std::vector<std::shared_ptr<Value>> params{};
         if (node.func_rparams()) {
+            int iter = 0;
             for (auto& param : node.func_rparams()->nodes()) {
                 param->accept(*this);
-                params.push_back(_module->current_block()->last()->reg());
+                auto [type, ident] = func_params.at(iter);
+                auto result = _module->current_block()->last()->reg();
+                if (!Type::is_same(result->getType(), type)) {
+                    if (Type::is_same(type, IntType::get())) {
+                        auto tmp = std::make_shared<IntValue>(_factory->next_reg());
+                        _factory->addSextInstruct(tmp, result);
+                        result = tmp;
+                    } else if (Type::is_same(type, CharType::get())) {
+                        auto tmp = std::make_shared<CharValue>(_factory->next_reg());
+                        _factory->addTruncInstruct(tmp, result);
+                        result = tmp;
+                    }
+                }
+                params.push_back(result);
+                iter++;
             }
         }
 
-        std::shared_ptr<Value> ret;
         if (Type::is_same(func->return_type(), VoidType::get())) {
-            ret = nullptr;
+            result = nullptr;
         } else {
             if (Type::is_same(func->return_type(), IntType::get())) {
-                ret = std::make_shared<IntValue>(_factory->next_reg());
+                result = std::make_shared<IntValue>(_factory->next_reg());
             } else if (Type::is_same(func->return_type(), CharType::get())) {
-                ret = std::make_shared<CharValue>(_factory->next_reg());
+                result = std::make_shared<CharValue>(_factory->next_reg());
             }
         }
 
-        _factory->addCallInstruct(ret, func->function(), params);
+        _factory->addCallInstruct(result, func->function(), params);
     }
 }
 
@@ -242,18 +317,124 @@ void IrGenerator::visit(BinaryExpNode& node) {
         case entities::OP_MUL:
         case entities::OP_MOD:
         case entities::OP_DIV:
-            result_bw = 32;
-            break;
-        case entities::OP_AND:
         case entities::OP_EQ:
+        case entities::OP_NEQ:
         case entities::OP_GE:
         case entities::OP_GT:
         case entities::OP_LE:
         case entities::OP_LT:
-        case entities::OP_NEQ:
-        case entities::OP_OR:
-            result_bw = 1;
+            result_bw = 32;
             break;
+        case entities::OP_AND: {
+            auto andn = _factory->next_block();
+            _factory->addBrInstruct("and_entry" + andn);
+
+            _module->current_function()->addBlock("and_entry" + andn);
+            auto alloca = std::make_shared<PtrValue>(BoolType::get(), false, _factory->next_reg());
+            _factory->addAllocaInstruct(alloca);
+            _factory->addBrInstruct("and_left" + andn);
+
+            _module->current_function()->addBlock("and_left" + andn);
+            node.left()->accept(*this);
+            auto reg = _module->current_block()->last()->reg();
+            if (Type::is_same(reg->getType(), IntType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<IntConstValue>(0));
+                reg = result;
+            } else if (Type::is_same(reg->getType(), CharType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<CharConstValue>(0));
+                reg = result;
+            }
+            _factory->addCondBrInstruct(reg, "and_right" + andn, "and_false" + andn);
+
+            _module->current_function()->addBlock("and_right" + andn);
+            node.right()->accept(*this);
+            reg = _module->current_block()->last()->reg();
+            if (Type::is_same(reg->getType(), IntType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<IntConstValue>(0));
+                reg = result;
+            } else if (Type::is_same(reg->getType(), CharType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<CharConstValue>(0));
+                reg = result;
+            }
+            _factory->addCondBrInstruct(reg, "and_true" + andn, "and_false" + andn);
+
+            _module->current_function()->addBlock("and_true" + andn);
+            auto result = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addAddInstruct(result, std::make_shared<BoolConstValue>(1), std::make_shared<BoolConstValue>(0));
+            _factory->addStoreInstruct(result, alloca);
+            _factory->addBrInstruct("and_end" + andn);
+
+            _module->current_function()->addBlock("and_false" + andn);
+            result = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addAddInstruct(result, std::make_shared<BoolConstValue>(0), std::make_shared<BoolConstValue>(0));
+            _factory->addStoreInstruct(result, alloca);
+            _factory->addBrInstruct("and_end" + andn);
+
+            _module->current_function()->addBlock("and_end" + andn);
+            result = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addLoadInstruct(alloca, result);
+            return ;
+        }
+        break;
+        case entities::OP_OR: {
+            auto orn = _factory->next_block();
+            _factory->addBrInstruct("or_entry" + orn);
+
+            _module->current_function()->addBlock("or_entry" + orn);
+            auto alloca = std::make_shared<PtrValue>(BoolType::get(), false, _factory->next_reg());
+            _factory->addAllocaInstruct(alloca);
+            _factory->addBrInstruct("or_left" + orn);
+
+            _module->current_function()->addBlock("or_left" + orn);
+            node.left()->accept(*this);
+            auto reg = _module->current_block()->last()->reg();
+            if (Type::is_same(reg->getType(), IntType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<IntConstValue>(0));
+                reg = result;
+            } else if (Type::is_same(reg->getType(), CharType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<CharConstValue>(0));
+                reg = result;
+            }
+            _factory->addCondBrInstruct(reg, "or_true" + orn, "or_right" + orn);
+
+            _module->current_function()->addBlock("or_right" + orn);
+            node.right()->accept(*this);
+            reg = _module->current_block()->last()->reg();
+            if (Type::is_same(reg->getType(), IntType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<IntConstValue>(0));
+                reg = result;
+            } else if (Type::is_same(reg->getType(), CharType::get())) {
+                auto result = std::make_shared<BoolValue>(_factory->next_reg());
+                _factory->addNeqInstruct(result, reg, std::make_shared<CharConstValue>(0));
+                reg = result;
+            }
+            _factory->addCondBrInstruct(reg, "or_true" + orn, "or_false" + orn);
+
+            _module->current_function()->addBlock("or_true" + orn);
+            auto result = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addAddInstruct(result, std::make_shared<BoolConstValue>(1), std::make_shared<BoolConstValue>(0));
+            _factory->addStoreInstruct(result, alloca);
+            _factory->addBrInstruct("or_end" + orn);
+
+            _module->current_function()->addBlock("or_false" + orn);
+            result = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addAddInstruct(result, std::make_shared<BoolConstValue>(0), std::make_shared<BoolConstValue>(0));
+            _factory->addStoreInstruct(result, alloca);
+            _factory->addBrInstruct("or_end" + orn);
+
+            _module->current_function()->addBlock("or_end" + orn);
+            result = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addLoadInstruct(alloca, result);
+            return ;
+        }
+        break;
         default:
             break;
     }
@@ -265,11 +446,19 @@ void IrGenerator::visit(BinaryExpNode& node) {
             auto reg = std::make_shared<IntValue>(_factory->next_reg());
             _factory->addSextInstruct(reg, left);
             left = _module->current_block()->last()->reg();
+        } else if (Type::is_same(left->getType(), BoolType::get())) {
+            auto reg = std::make_shared<IntValue>(_factory->next_reg());
+            _factory->addZextInstruct(reg, left);
+            left = _module->current_block()->last()->reg();
         }
     } else if (result_bw == 1) {
-        if (Type::is_same(left->getType(), IntType::get()) || Type::is_same(left->getType(), CharType::get())) {
+        if (Type::is_same(left->getType(), IntType::get())) {
             auto reg = std::make_shared<BoolValue>(_factory->next_reg());
-            _factory->addTruncInstruct(reg, left);
+            _factory->addNeqInstruct(reg, left, std::make_shared<IntConstValue>(0));
+            left = _module->current_block()->last()->reg();
+        } else if (Type::is_same(left->getType(), CharType::get())) {
+            auto reg = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addNeqInstruct(reg, left, std::make_shared<CharConstValue>(0));
             left = _module->current_block()->last()->reg();
         }
     }
@@ -281,11 +470,19 @@ void IrGenerator::visit(BinaryExpNode& node) {
             auto reg = std::make_shared<IntValue>(_factory->next_reg());
             _factory->addSextInstruct(reg, right);
             right = _module->current_block()->last()->reg();
+        } else if (Type::is_same(right->getType(), BoolType::get())) {
+            auto reg = std::make_shared<IntValue>(_factory->next_reg());
+            _factory->addZextInstruct(reg, right);
+            right = _module->current_block()->last()->reg();
         }
     } else if (result_bw == 1) {
-        if (Type::is_same(right->getType(), IntType::get()) || Type::is_same(right->getType(), CharType::get())) {
+        if (Type::is_same(right->getType(), IntType::get())) {
             auto reg = std::make_shared<BoolValue>(_factory->next_reg());
-            _factory->addTruncInstruct(reg, right);
+            _factory->addNeqInstruct(reg, right, std::make_shared<IntConstValue>(0));
+            right = _module->current_block()->last()->reg();
+        } else if (Type::is_same(right->getType(), CharType::get())) {
+            auto reg = std::make_shared<BoolValue>(_factory->next_reg());
+            _factory->addNeqInstruct(reg, right, std::make_shared<CharConstValue>(0));
             right = _module->current_block()->last()->reg();
         }
     }
@@ -392,6 +589,9 @@ void IrGenerator::visit(LValNode& node) {
         }
         auto result = std::make_shared<PtrValue>(ptr_t->next(), false, _factory->next_reg());
         _factory->addGepInstruct(result, var->value(), nullptr, std::static_pointer_cast<IntConstValue>(offset));
+        if (!node.exp()) {
+            return ;
+        }
         type = ptr_t->next();
         value = result;
     } else {
@@ -445,6 +645,9 @@ void IrGenerator::visit(BlockNode& node) {
 }
 
 void IrGenerator::visit(BlockItemNode& node) {
+    if (_module->current_block()->ended()) {
+        return ;
+    }
     if (node.decl()) {
         node.decl()->accept(*this);
     } else if (node.stmt()) {
@@ -469,8 +672,7 @@ void IrGenerator::visit(AssignStmtNode& node) {
         lval->exp()->accept(*this);
         auto offset = _module->current_block()->last()->reg();
         auto result = std::make_shared<PtrValue>(ptr_t->next(), false, _factory->next_reg());
-        auto elem = std::make_shared<IntConstValue>(0);
-        _factory->addGepInstruct(result, var->value(), elem, std::static_pointer_cast<IntConstValue>(offset));
+        _factory->addGepInstruct(result, var->value(), nullptr, std::static_pointer_cast<IntConstValue>(offset));
         type = ptr_t->next();
         ptr = result;
     } else {
@@ -579,11 +781,11 @@ void IrGenerator::visit(PrintfStmtNode& node) {
 }
 
 void IrGenerator::visit(BreakStmtNode& node) {
-    _factory->addBrInstruct(_for_end_label);
+    _factory->addBrInstruct(_for_end_labels.at(_for_end_labels.size() - 1));
 }
 
 void IrGenerator::visit(ContinueStmtNode& node) {
-    _factory->addBrInstruct(_for_in_label);
+    _factory->addBrInstruct(_for_out_labels.at(_for_out_labels.size() - 1));
 }
 
 void IrGenerator::visit(ExpStmtNode& node) {
@@ -601,8 +803,8 @@ void IrGenerator::visit(ForStmtNode& node) {
         node.for_in()->accept(*this);
     }
     _factory->addBrInstruct("for_in" + forn);
-    _for_in_label = "for_in" + forn;
-    _for_end_label = "for_end" + forn;
+    _for_out_labels.push_back("for_out" + forn);
+    _for_end_labels.push_back("for_end" + forn);
 
     _module->current_function()->addBlock("for_in" + forn);
     auto for_in = _module->current_function()->current_block();
@@ -610,9 +812,15 @@ void IrGenerator::visit(ForStmtNode& node) {
         node.cond()->accept(*this);
         auto result = _module->current_block()->last()->reg();
         if (!Type::is_same(result->getType(), BoolType::get())) {
+            std::shared_ptr<Value> value;
+            if (Type::is_same(result->getType(), CharType::get())) {
+                value = std::make_shared<CharConstValue>(0);
+            } else if (Type::is_same(result->getType(), IntType::get())) {
+                value = std::make_shared<IntConstValue>(0);
+            }
             auto tmp = result;
             result = std::make_shared<BoolValue>(_factory->next_reg());
-            _factory->addTruncInstruct(result, tmp);
+            _factory->addNeqInstruct(result, tmp, value);
         }
         _factory->addCondBrInstruct(result, "for_body" + forn, "for_end" + forn);
     } else {
@@ -631,6 +839,9 @@ void IrGenerator::visit(ForStmtNode& node) {
     }
     _factory->addBrInstruct("for_in" + forn);
 
+    _for_out_labels.pop_back();
+    _for_end_labels.pop_back();
+
     _module->current_function()->addBlock("for_end" + forn);
 }
 
@@ -644,7 +855,7 @@ void IrGenerator::visit(IfStmtNode& node) {
     if (!Type::is_same(result->getType(), BoolType::get())) {
         auto tmp = result;
         result = std::make_shared<BoolValue>(_factory->next_reg());
-        _factory->addTruncInstruct(result, tmp);
+        _factory->addNeqInstruct(result, tmp, std::make_shared<IntConstValue>(0));
     }
 
     if (node.else_stmt()) {
@@ -700,6 +911,7 @@ void IrGenerator::visit(FuncFParamsNode& node) {
     for (auto& [type, ident] : node.params()) {
         std::shared_ptr<Var> var;
         std::string log_type = "";
+        std::shared_ptr<Value> value;
         if (auto ptr_t = dynamic_cast<PtrType*>(type); ptr_t) {
             auto base_t = ptr_t->next();
             if (Type::is_same(base_t, IntType::get())) {
@@ -712,10 +924,16 @@ void IrGenerator::visit(FuncFParamsNode& node) {
         } else {
             if (Type::is_same(type, IntType::get())) {
                 var = Var::getInt(ident, false);
-                var->value() = std::make_shared<PtrValue>(type, false, ident);
+                value = std::make_shared<IntValue>(ident);
+                var->value() = std::make_shared<PtrValue>(IntType::get(), false, _factory->next_reg());
+                _factory->addAllocaInstruct(var->value());
+                _factory->addStoreInstruct(value, var->value());
             } else if (Type::is_same(type, CharType::get())) {
                 var = Var::getChar(ident, false);
-                var->value() = std::make_shared<PtrValue>(type, false, ident);
+                value = std::make_shared<CharValue>(ident);
+                var->value() = std::make_shared<PtrValue>(CharType::get(), false, _factory->next_reg());
+                _factory->addAllocaInstruct(var->value());
+                _factory->addStoreInstruct(value, var->value());
             }
         }
         _current_table->addVar(var);

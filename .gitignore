@@ -1,5 +1,4 @@
-# Xmake cache
-.xmake/
+
 build/
 
 # MacOS Cache
@@ -10,3 +9,5 @@ build/
 test/**
 
 *.zip
+
+document/

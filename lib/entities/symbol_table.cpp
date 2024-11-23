@@ -31,6 +31,7 @@ uint32_t SymbolTable::_block_counter = 1;
 
 bool SymbolTable::add(std::shared_ptr<Symbol> symbol) {
     if (auto s = get(symbol->ident()); s == nullptr) {
+        _symbol_order.push_back(symbol->ident());
         _symbols.insert({symbol->ident(), symbol});
         return true;
     }
@@ -59,8 +60,8 @@ std::vector<std::shared_ptr<Var>> SymbolTable::getVars() {
 
 std::vector<std::shared_ptr<Func>> SymbolTable::getFuncs() {
     std::vector<std::shared_ptr<Func>> ret{};
-    for (auto& [ident, symbol] : _symbols) {
-        if (auto func = std::dynamic_pointer_cast<Func>(symbol); func) {
+    for (auto& ident : _symbol_order) {
+        if (auto func = std::dynamic_pointer_cast<Func>(_symbols.at(ident)); func) {
             ret.push_back(func);
         }
     }
