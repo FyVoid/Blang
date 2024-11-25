@@ -1,3 +1,14 @@
+/**
+ * @file buaa.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief BUAA related definations
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_BUAA_H
 #define BLANG_BUAA_H
 
@@ -9,6 +20,10 @@ namespace blang {
 
 namespace buaa {
 
+/**
+ * @brief Buaa error types
+ * 
+ */
 enum ErrorType {
     ERROR_LOGICAL_AND,
     ERROR_LOGICAL_OR,

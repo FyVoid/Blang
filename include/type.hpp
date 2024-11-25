@@ -1,3 +1,14 @@
+/**
+ * @file type.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Type support for blang
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_TYPE_H
 #define BLANG_TYPE_H
 
@@ -14,10 +25,18 @@ namespace blang {
 
 namespace entities {
 
+/**
+ * @brief Type id enums
+ * 
+ */
 enum BlangType {
     TYPE_INT, TYPE_CHAR, TYPE_PTR, TYPE_VOID, TYPE_BOOL,
 };
 
+/**
+ * @brief Type base class
+ * 
+ */
 class Type {
 protected:
     BlangType _type_id;
@@ -31,6 +50,10 @@ public:
     virtual std::string to_string() = 0;
 };
 
+/**
+ * @brief Value type base class
+ * 
+ */
 class ValueType : public Type {
 protected:
     ValueType(BlangType type) : Type(type) {

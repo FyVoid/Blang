@@ -1,3 +1,14 @@
+/**
+ * @file evaluator.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Evaluator support for ast
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_EVALUATOR_H
 #define BLANG_EVALUATOR_H
 
@@ -15,10 +26,22 @@ namespace tools {
 
 using namespace entities;
 
+/**
+ * @brief A Visitor sub class, evaluate constant expression in ast
+ * 
+ */
 class Evaluator : public Visitor {
 private:
     std::shared_ptr<SymbolTable> _current_table;
     int32_t _value;
+    /**
+     * @brief Calculate binary exp according to op
+     * 
+     * @param left 
+     * @param right 
+     * @param op 
+     * @return int32_t 
+     */
     int32_t calBinary(int32_t left, int32_t right, Op op) {
         switch (op) {
             case OP_ADD:    return left +  right;
@@ -99,6 +122,14 @@ private:
     }
 public:
     Evaluator();
+    /**
+     * @brief Evaluate a constatnt expression in ast
+     * throw std::runtime_error if expression cannot be evaluated
+     * 
+     * @param node Exp to be evaluated
+     * @param current_table Current symbol table
+     * @return int32_t 
+     */
     int32_t evaluate(ExpNode& node, std::shared_ptr<SymbolTable> current_table) {
         _current_table = current_table;
         _value = 0;

@@ -1,3 +1,14 @@
+/**
+ * @file ir_generator.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief LLVM IR generator from ast
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_IR_GENERATOR_H
 #define BLANG_IR_GENERATOR_H
 
@@ -16,6 +27,11 @@ namespace backend {
 using namespace entities;
 using namespace tools;
 
+/**
+ * @brief LLVM IR generator for blang
+ * Convert ast to entities::IrModule
+ * 
+ */
 class IrGenerator : public Visitor {
 private:
     std::shared_ptr<Logger> _logger;
@@ -25,6 +41,15 @@ private:
     std::shared_ptr<IrFactory> _factory;
     std::vector<std::string> _for_end_labels = {};
     std::vector<std::string> _for_out_labels = {};
+    /**
+     * @brief Wrapper for exp evaluation
+     * Catched std::runtime_error, return -1 if error occured
+     * Therefore should be used after validating expression
+     * 
+     * @param node 
+     * @param current_table 
+     * @return int32_t 
+     */
     static int32_t evaluate(ExpNode& node, std::shared_ptr<SymbolTable> current_table) {
         static Evaluator evaluator{};
         try {
@@ -33,6 +58,13 @@ private:
             return -1;
         }
     }
+    /**
+     * @brief Convert initval node to a vector containing initilize values
+     * 
+     * @tparam T 
+     * @param node 
+     * @return std::vector<T> 
+     */
     template<typename T>
     std::vector<T> getInitVal(InitValNode& node) {
         std::vector<T> ret{};

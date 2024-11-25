@@ -1,3 +1,14 @@
+/**
+ * @file syntax_checker.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Syntax check support for blang frontend
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_SYNTAX_CHECKER_H
 #define BLANG_SYNTAX_CHECKER_H
 
@@ -23,6 +34,10 @@ namespace frontend {
 using namespace entities;
 using namespace tools;
 
+/**
+ * @brief Syntax checker for blang
+ * 
+ */
 class SyntaxChecker : public Visitor {
 private:
     std::shared_ptr<Logger> _logger;
@@ -43,7 +58,10 @@ private:
             }
         }
     };
-    // b
+    /**
+     * @brief B type error checker
+     * 
+     */
     class DefChecker : public Checker {
     private:
         Type* _type;
@@ -184,7 +202,10 @@ private:
             return _func_block;
         }
     };
-    // c
+    /**
+     * @brief C type error checker
+     * 
+     */
     class IdentChecker : public Checker {
     private:
         virtual void visit(LValNode& node) override {
@@ -211,7 +232,10 @@ private:
             node.accept(*this);
         }
     };
-    // d, e
+    /**
+     * @brief D, E type erro checker
+     * 
+     */
     class ParamChecker : public Checker {
     private:
         class ValueAssertChecker : public Checker {
@@ -359,7 +383,10 @@ private:
             node.accept(*this);
         }
     };
-    // f, g
+    /**
+     * @brief F, G type error checker
+     * 
+     */
     class ReturnChecker : public Checker {
     private:
         virtual void visit(ForStmtNode& node) override {
@@ -440,7 +467,10 @@ private:
             node.accept(*this);
         }
     };
-    // h
+    /**
+     * @brief H type error checker
+     * 
+     */
     class AssignChecker : public Checker {
     private:
         virtual void visit(LValNode& node) override {
@@ -486,7 +516,10 @@ private:
             node.accept(*this);
         }
     };
-    // m
+    /**
+     * @brief M type error checker
+     * 
+     */
     class BlockChecker : public Checker {
     private:
         virtual void visit(ContinueStmtNode& node) override {

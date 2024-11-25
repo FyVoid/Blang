@@ -1,3 +1,14 @@
+/**
+ * @file optimizer.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief IR optimization
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_OPTIMIZER_H
 #define BLANG_OPTIMIZER_H
 

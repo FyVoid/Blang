@@ -1,3 +1,14 @@
+/**
+ * @file logger.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Logger for blang
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_LOGGER_H
 #define BLANG_LOGGER_H
 
@@ -11,10 +22,18 @@
 
 namespace blang {
 
+/**
+ * @brief Enum of log types
+ * 
+ */
 enum LogType {
     LOG_ERROR, LOG_LEXER, LOG_PARSER, LOG_SYNTAX,
 };
 
+/**
+ * @brief Log item base class
+ * 
+ */
 struct Log {
     LogType type;
     uint32_t line;
@@ -26,6 +45,10 @@ struct Log {
     }
 };
 
+/**
+ * @brief Log of standard buaa error
+ * 
+ */
 struct ErrorLog : public Log {
     buaa::ErrorType error;
     ErrorLog(uint32_t line, const std::string& message, buaa::ErrorType error) :
@@ -35,6 +58,10 @@ struct ErrorLog : public Log {
     }
 };
 
+/**
+ * @brief Log by lexer
+ * 
+ */
 struct LexerLog : public Log {
     frontend::TokenType token_type;
     LexerLog(uint32_t line, frontend::TokenType type, const std::string& value) :
@@ -47,6 +74,10 @@ struct LexerLog : public Log {
     }
 };
 
+/**
+ * @brief Log by parser
+ * 
+ */
 struct ParserLog : public Log {
     ParserLog(uint32_t line, const std::string& name) :
         Log(LOG_PARSER, line, name) {}
@@ -55,6 +86,10 @@ struct ParserLog : public Log {
     }
 };
 
+/**
+ * @brief Log by syntax checker
+ * 
+ */
 struct SyntaxLog : public Log {
     uint32_t blockn;
     std::string type;
@@ -65,13 +100,27 @@ struct SyntaxLog : public Log {
     }
 };
 
+/**
+ * @brief Logger support for blang
+ * 
+ */
 class Logger {
 private:
     std::vector<std::shared_ptr<ErrorLog>> _errors;
     std::vector<std::shared_ptr<Log>> _logs;
 public:
     Logger();
+    /**
+     * @brief Get all error logs by reference
+     * 
+     * @return std::vector<std::shared_ptr<ErrorLog>>& 
+     */
     std::vector<std::shared_ptr<ErrorLog>>& errors() { return _errors; }
+    /**
+     * @brief Get all logs by reference
+     * 
+     * @return std::vector<std::shared_ptr<Log>>& 
+     */
     std::vector<std::shared_ptr<Log>>& logs() { return _logs; }
     std::vector<std::shared_ptr<SyntaxLog>> syntax_logs();
     void sortError();

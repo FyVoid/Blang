@@ -1,3 +1,14 @@
+/**
+ * @file blang.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Blang main class
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_H
 #define BLANG_H
 
@@ -16,6 +27,10 @@ namespace blang {
 using namespace frontend;
 using namespace backend;
 
+/**
+ * @brief The blang compiler
+ * 
+ */
 class Blang {
 private:
     std::shared_ptr<Logger> _logger;

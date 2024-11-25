@@ -1,3 +1,14 @@
+/**
+ * @file ast.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Abstract tree support for blang
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_AST_H
 #define BLANG_AST_H
 
@@ -11,6 +22,10 @@ namespace blang {
 
 namespace entities {
 
+/**
+ * @brief Operator types
+ * 
+ */
 enum Op {
     OP_ADD, OP_MINUS, OP_NOT,
     OP_MUL, OP_DIV, OP_MOD,
@@ -22,24 +37,52 @@ enum Op {
 
 class Visitor;
 
+/**
+ * @brief Abstract tree node base class
+ * 
+ */
 class AstNode {
 protected:
     uint32_t _line;
     AstNode(uint32_t line) : _line(line) {}
 public:
+    /**
+     * @brief Acquire line of this node in source file
+     * 
+     * @return uint32_t 
+     */
     uint32_t line() { return _line; }
+    /**
+     * @brief Accept method for visitor pattern
+     * 
+     * @param visitor 
+     */
     virtual void accept(Visitor& visitor) = 0;
 };
 
+/**
+ * @brief Exp node base class
+ * This class is a abstract class
+ *
+ */
 class ExpNode : public AstNode {
 private:
     const Op _op;
 protected:
     ExpNode(uint32_t line, Op op) : AstNode(line), _op(op) {}
 public:
+    /**
+     * @brief Operator type of this exp
+     * 
+     * @return Op 
+     */
     Op op() { return _op; }
 };
 
+/**
+ * @brief Binary exp node
+ * 
+ */
 class BinaryExpNode : public ExpNode {
 private:
     std::shared_ptr<ExpNode> _left;
@@ -55,6 +98,12 @@ public:
 class PrimaryExpNode;
 class FuncRParamsNode;
 
+/**
+ * @brief Unary exp node
+ * Providing 3 different initilizers, representing different types
+ * when accessing items, check if pointer is nullptr
+ * 
+ */
 class UnaryExpNode : public ExpNode {
 private:
     std::shared_ptr<UnaryExpNode> _unary_exp;
@@ -62,10 +111,33 @@ private:
     const std::string _ident;
     std::shared_ptr<FuncRParamsNode> _func_rparams;
 public:
+    /**
+     * @brief Construct a new Unary Exp Node object
+     * Node constructed with this method represents op(exp)
+     *
+     * @param line 
+     * @param op 
+     * @param unary_exp 
+     */
     UnaryExpNode(uint32_t line, Op op, std::shared_ptr<UnaryExpNode> unary_exp) :
         ExpNode(line, op), _unary_exp(unary_exp), _primary_exp(nullptr), _ident(""), _func_rparams(nullptr) {}
+    /**
+     * @brief Construct a new Unary Exp Node object
+     * Node constructed with this method represents primary exp
+     * 
+     * @param line 
+     * @param primary_exp 
+     */
     UnaryExpNode(uint32_t line, std::shared_ptr<PrimaryExpNode> primary_exp) :
         ExpNode(line, OP_EMPTY), _unary_exp(nullptr), _primary_exp(primary_exp), _ident(""), _func_rparams(nullptr) {}
+    /**
+     * @brief Construct a new Unary Exp Node object
+     * Node constructed with this method represents ident(funcrparams)
+     * 
+     * @param line 
+     * @param ident 
+     * @param func_rparams 
+     */
     UnaryExpNode(uint32_t line, const std::string& ident, std::shared_ptr<FuncRParamsNode> func_rparams) :
         ExpNode(line, OP_EMPTY), _unary_exp(nullptr), _primary_exp(nullptr), _ident(ident), _func_rparams(func_rparams) {}
     std::shared_ptr<UnaryExpNode> unary_exp() { return _unary_exp; }
@@ -75,10 +147,19 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Representing diffferent init val
+ * 
+ */
 enum InitType {
     INIT_SINGLE, INIT_ARRAY, INIT_STRING,
 };
 
+/**
+ * @brief Init val node
+ * Const ident is saved in _is_const member, and accessed with is_const()
+ * 
+ */
 class InitValNode : public AstNode {
 private:
     InitType _type;
@@ -88,19 +169,45 @@ private:
     InitValNode(uint32_t line, InitType type, std::vector<std::shared_ptr<ExpNode>> vec, const std::string& str, bool is_const) :
         AstNode(line), _type(type), _exps(vec), _str(str), _is_const(is_const) {}
 public:
-    // single Exp
+    /**
+     * @brief Construct a new Init Val Node object
+     * Represent init val with single init val
+     * 
+     * @param line 
+     * @param exp 
+     * @param is_const 
+     */
     InitValNode(uint32_t line, std::shared_ptr<ExpNode> exp, bool is_const) :
         InitValNode(line, INIT_SINGLE, std::vector<std::shared_ptr<ExpNode>>{exp}, "", is_const) {}
-    // { Exp, ... }
+    /**
+     * @brief Construct a new Init Val Node object
+     * Represent init val with a initilizer list style init values
+     * 
+     * @param line 
+     * @param exps 
+     * @param is_const 
+     */
     InitValNode(uint32_t line, std::vector<std::shared_ptr<ExpNode>>& exps, bool is_const) :
         InitValNode(line, INIT_ARRAY, exps, "", is_const) {}
-    // String
+    /**
+     * @brief Construct a new Init Val Node object
+     * Represent init val with a string
+     *
+     * @param line 
+     * @param str 
+     * @param is_const 
+     */
     InitValNode(uint32_t line, const std::string& str, bool is_const) :
         InitValNode(line, INIT_STRING, std::vector<std::shared_ptr<ExpNode>>(), str, is_const) {}
     void accept(Visitor& visitor) override;
     const InitType& type() { return _type; }
     const std::string& str() { return _str; }
     bool is_const() { return _is_const; }
+    /**
+     * @brief Will only return exp if type is INIT_SINGLE, therefore can be used to determine node type
+     * 
+     * @return std::shared_ptr<ExpNode> 
+     */
     std::shared_ptr<ExpNode> exp() {
         if (_type == INIT_SINGLE) return _exps[0];
         return std::shared_ptr<ExpNode>();
@@ -110,6 +217,11 @@ public:
     }
 };
 
+/**
+ * @brief Var def node
+ * const ident saved in _is_const member
+ * 
+ */
 class DefNode : public AstNode {
 private:
     const std::string _ident;
@@ -127,6 +239,11 @@ public:
     std::shared_ptr<ExpNode> array_exp() { return _array_exp; }
 };
 
+/**
+ * @brief Decl node
+ * const ident saved in _is_const member
+ * 
+ */
 class DeclNode : public AstNode {
 private:
     Type* const _type;
@@ -141,6 +258,10 @@ public:
     std::vector<std::shared_ptr<DefNode>>& defs() { return _nodes; }
 };
 
+/**
+ * @brief FuncRParam node
+ * 
+ */
 class FuncRParamsNode : public AstNode {
 private:
     std::vector<std::shared_ptr<ExpNode>> _nodes;
@@ -151,6 +272,12 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Representing diffrent immediate numbers(character and integer)
+ * Use entities::Type to indicate number type
+ * access with get<T>()
+ * 
+ */
 class ValueNode : public AstNode {
 private:
     Type* const _type;
@@ -161,13 +288,27 @@ public:
     Type* type() { return _type; }
     void accept(Visitor& visitor) override;
     template<typename T>
+    /**
+     * @brief Acquire actual value of this node
+     * if access with wrong type will throw std::runtime_error, check for type in advance
+     * 
+     * @return T 
+     */
     T get() { return std::get<T>(_value); } // may throw error
 };
 
+/**
+ * @brief Enum for Rval types
+ * 
+ */
 enum RValType {
     RVAL_EXP, RVAL_GETINT, RVAL_GETCHAR,
 };
 
+/**
+ * @brief RVal node
+ * 
+ */
 class RValNode : public AstNode {
 private:
     const RValType _type;
@@ -184,6 +325,11 @@ public:
 
 class LValNode;
 
+/**
+ * @brief Primary exp node
+ * Check for nullptr before using items
+ * 
+ */
 class PrimaryExpNode : public AstNode {
 private:
     std::shared_ptr<ExpNode> _exp;
@@ -208,6 +354,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Lval node
+ * 
+ */
 class LValNode : public AstNode {
 private:
     const std::string _ident;
@@ -222,11 +372,19 @@ public:
 
 class BlockNode;
 
+/**
+ * @brief Stmt node base class
+ * 
+ */
 class StmtNode : public AstNode {
 protected:
     StmtNode(uint32_t line) : AstNode(line) {}
 };
 
+/**
+ * @brief Assign stmt
+ * 
+ */
 class AssignStmtNode : public StmtNode {
 private:
     std::shared_ptr<LValNode> _lval;
@@ -239,6 +397,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Printf stmt
+ * 
+ */
 class PrintfStmtNode : public StmtNode {
 private:
     std::string _fmt;
@@ -251,6 +413,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Exp stmt, exp may be nullptr
+ * 
+ */
 class ExpStmtNode : public StmtNode {
 private:
     std::shared_ptr<ExpNode> _exp;
@@ -261,6 +427,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Block stmt
+ * 
+ */
 class BlockStmtNode : public StmtNode {
 private:
     std::shared_ptr<BlockNode> _block;
@@ -271,6 +441,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief If stmt, check for nullptr using else stmt
+ * 
+ */
 class IfStmtNode : public StmtNode {
 private:
     std::shared_ptr<ExpNode> _cond;
@@ -285,6 +459,11 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief For stmt
+ * for (for_in; cond; for_out) stmt
+ * 
+ */
 class ForStmtNode : public StmtNode {
 private:
     std::shared_ptr<StmtNode> _for_in;
@@ -301,18 +480,33 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Break stmt
+ * Just break
+ * 
+ */
 class BreakStmtNode : public StmtNode {
 public:
     BreakStmtNode(uint32_t line) : StmtNode(line) {}
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Continue stmt
+ * Just continue
+ * 
+ */
 class ContinueStmtNode : public StmtNode {
 public:
     ContinueStmtNode(uint32_t line) : StmtNode(line) {}
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Return stmt
+ * Exp may be nullptr(return ;)
+ * 
+ */
 class ReturnStmtNode : public StmtNode {
 private:
     std::shared_ptr<ExpNode> _exp;
@@ -323,6 +517,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Block item in block node
+ * 
+ */
 class BlockItemNode: public AstNode {
 private:
     std::shared_ptr<AstNode> _item;
@@ -340,6 +538,10 @@ public:
     }
 };
 
+/**
+ * @brief Block node
+ * 
+ */
 class BlockNode : public AstNode {
 private:
     std::vector<std::shared_ptr<BlockItemNode>> _items;
@@ -350,6 +552,10 @@ public:
     std::vector<std::shared_ptr<BlockItemNode>> items() { return _items; }
 };
 
+/**
+ * @brief FuncFParam node
+ * 
+ */
 class FuncFParamsNode : public AstNode {
 private:
     std::vector<std::tuple<Type*, std::string>> _params;
@@ -361,6 +567,11 @@ public:
     std::vector<std::tuple<Type*, std::string>>& params() { return _params; }
 };
 
+/**
+ * @brief Func def node
+ * type member is actually return type
+ * 
+ */
 class FuncDefNode : public AstNode {
 private:
     Type* const _type;
@@ -378,6 +589,10 @@ public:
     std::shared_ptr<BlockNode> block() { return _block; }
 };
 
+/**
+ * @brief Main node
+ * 
+ */
 class MainNode : public AstNode {
 private:
     std::shared_ptr<BlockNode> _block;
@@ -388,6 +603,10 @@ public:
     void accept(Visitor& visitor) override;
 };
 
+/**
+ * @brief Comp unit node
+ * 
+ */
 class CompNode : public AstNode {
 private:
     std::shared_ptr<CompNode> _comp;

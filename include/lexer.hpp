@@ -1,3 +1,14 @@
+/**
+ * @file lexer.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Lexer of blang frontend
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_LEXER_H
 #define BLANG_LEXER_H
 
@@ -11,6 +22,10 @@ namespace blang {
 
 namespace frontend {
 
+/**
+ * @brief Lexer of blang
+ * 
+ */
 class Lexer {
 private:
     uint32_t _pos = 0;

@@ -1,3 +1,14 @@
+/**
+ * @file parser.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Parser for blang frontend
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_PARSER_H
 #define BLANG_PARSER_H
 
@@ -16,23 +27,50 @@ namespace frontend {
 
 using namespace entities;
 
+/**
+ * @brief Wrapper of a parse try
+ * return by tryParse<T> function, parse log stored in buffer
+ * 
+ */
 struct ParseResult {
     std::shared_ptr<AstNode> node;
     std::vector<std::shared_ptr<Log>> log_buffer;
     std::vector<std::shared_ptr<ErrorLog>> error_buffer;
-    ParseResult() : node(nullptr), log_buffer(std::vector<std::shared_ptr<Log>>()), error_buffer(std::vector<std::shared_ptr<ErrorLog>>()) {}
+    ParseResult() : node(nullptr), 
+        log_buffer(std::vector<std::shared_ptr<Log>>()), 
+        error_buffer(std::vector<std::shared_ptr<ErrorLog>>()) {}
+    /**
+     * @brief Add a log to log buffer
+     * 
+     * @param log 
+     */
     void log(std::shared_ptr<Log> log) {
         log_buffer.push_back(log);
     }
+    /**
+     * @brief Add an error to error log buffer
+     * 
+     * @param error 
+     */
     void logError(std::shared_ptr<ErrorLog> error) {
         error_buffer.push_back(error);
     }
+    /**
+     * @brief Try to get a node of type T
+     * 
+     * @tparam T 
+     * @return std::shared_ptr<T> Return nullptr if not contains expected node
+     */
     template<typename T>
     std::shared_ptr<T> get() {
         return std::dynamic_pointer_cast<T>(node);
     }
 };
 
+/**
+ * @brief Parser support for blang
+ * 
+ */
 class Parser {
 private:
     std::shared_ptr<Logger> _logger;
@@ -95,7 +133,21 @@ private:
     Type* token2Type(Token token);
 
     bool match(std::initializer_list<TokenType> list);
+    /**
+     * @brief Check if next token matches token type
+     * 
+     * @param type Type to match
+     * @return true 
+     * @return false 
+     */
     bool matchNext(TokenType type) { return peak().type == type; }
+    /**
+     * @brief Check if current token matches token type
+     * 
+     * @param type Type to match
+     * @return true 
+     * @return false 
+     */
     bool check(TokenType type) { return current().type == type; }
 
     void update(std::shared_ptr<ParseResult> buffer, std::shared_ptr<ParseResult> result);
