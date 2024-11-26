@@ -13,6 +13,10 @@ namespace blang {
 
 namespace frontend {
 
+/**
+ * @brief espace character definations
+ * 
+ */
 const std::map<char, char> Parser::_escape_character_map
 = {
     {'a', '\a'}, {'b', '\b'}, {'t', '\t'},
@@ -95,6 +99,12 @@ void Parser::update(std::shared_ptr<ParseResult> buffer, std::shared_ptr<ParseRe
 
 #define CHECK_AND_STEP(type, result) if (check(type)) result->log(step()); else return result
 
+/**
+ * @brief Parse tokens from lexer to form ast
+ * 
+ * @param tokens 
+ * @return std::shared_ptr<CompNode> 
+ */
 std::shared_ptr<CompNode> Parser::parse(std::shared_ptr<std::vector<Token>> tokens) {
     _pos = 0;
     this->_tokens = tokens;
@@ -109,6 +119,14 @@ std::shared_ptr<CompNode> Parser::parse(std::shared_ptr<std::vector<Token>> toke
     return result->get<CompNode>();
 }
 
+/**
+ * @brief Try parsing a node, save results to buffer if success, discard any change if fail
+ * 
+ * @tparam T Node type to parse
+ * @param func Parse function
+ * @param buffer Parse result buffer
+ * @return std::shared_ptr<T> Return nullptr on failure
+ */
 template<typename T>
 std::shared_ptr<T> Parser::tryParse(ParseFuncPtr func, std::shared_ptr<ParseResult> buffer) {
     auto pos = _pos;
@@ -122,6 +140,15 @@ std::shared_ptr<T> Parser::tryParse(ParseFuncPtr func, std::shared_ptr<ParseResu
     return nullptr;
 }
 
+/**
+ * @brief Try parsing a node with constant flag types, save results to buffer on success, dicard any change on failure
+ * 
+ * @tparam T Node type to parse
+ * @param func Parse function
+ * @param is_const constant flag
+ * @param buffer Parse result buffer
+ * @return std::shared_ptr<T> Return nullptr on failure
+ */
 template<typename T>
 std::shared_ptr<T> Parser::tryParse(ParseTypeFuncPtr func, bool is_const, std::shared_ptr<ParseResult> buffer) {
     auto pos = _pos;

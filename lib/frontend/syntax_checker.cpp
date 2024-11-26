@@ -12,6 +12,12 @@ SyntaxChecker::SyntaxChecker(std::shared_ptr<Logger> logger) :
     
 }
 
+/**
+ * @brief Check syntax errors in comp node, return global symbol table
+ * 
+ * @param comp_unit 
+ * @return std::shared_ptr<GlobalSymbolTable> 
+ */
 std::shared_ptr<GlobalSymbolTable> SyntaxChecker::check(std::shared_ptr<CompNode> comp_unit) {
     _global_table = std::make_shared<GlobalSymbolTable>();
     _current_table = _global_table;

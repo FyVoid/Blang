@@ -1,3 +1,14 @@
+/**
+ * @file visitor.hpp
+ * @author fyvoid (fyvo1d@outlook.com)
+ * @brief Visitor base class defination
+ * @version 1.0
+ * @date 2024-11-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #ifndef BLANG_VISITOR_H
 #define BLANG_VISITOR_H
 

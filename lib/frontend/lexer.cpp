@@ -12,6 +12,10 @@ namespace blang {
 
 namespace frontend {
 
+/**
+ * @brief Keywords to token enum
+ * 
+ */
 std::map<std::string, TokenType> keyword_map = {
     {"int", INT},
     {"char", CHAR},
@@ -35,6 +39,12 @@ Lexer::Lexer(std::shared_ptr<Logger> logger) {
     _line = 1;
 }
 
+/**
+ * @brief From input(char vector) lex token vector
+ * 
+ * @param input_buffer 
+ * @return std::shared_ptr<std::vector<Token>> 
+ */
 std::shared_ptr<std::vector<Token>> Lexer::lexTokens(std::shared_ptr<std::vector<char>> input_buffer) {
     auto tokens = std::make_shared<std::vector<Token>>();
     _buffer = input_buffer;

@@ -35,6 +35,8 @@ enum BlangType {
 
 /**
  * @brief Type base class
+ * Types are designed with single instance pattern
+ * Always use TypeT::get() function to get types, and use Type::is_same(t1, t2) to compare types
  * 
  */
 class Type {
@@ -43,10 +45,23 @@ protected:
     Type(BlangType type) : _type_id(type) {}
 public:
     BlangType type_id() { return _type_id; }
+    /**
+     * @brief Compare two types
+     * 
+     * @param t1 
+     * @param t2 
+     * @return true types are of same type
+     * @return false types aren't same
+     */
     static bool is_same(Type* t1, Type* t2) {
         return t1 == t2;
     }
     virtual ~Type() = default;
+    /**
+     * @brief Return llvm ir style string representation
+     * 
+     * @return std::string 
+     */
     virtual std::string to_string() = 0;
 };
 
@@ -63,6 +78,10 @@ protected:
     }
 };
 
+/**
+ * @brief Int type
+ * 
+ */
 class IntType : public ValueType {
 protected:
     IntType() : ValueType(TYPE_INT) {}
@@ -74,6 +93,10 @@ public:
     virtual std::string to_string() { return "i32"; }
 };
 
+/**
+ * @brief Char type
+ * 
+ */
 class CharType : public ValueType {
 protected:
     CharType() : ValueType(TYPE_CHAR) {}
@@ -85,6 +108,10 @@ public:
     virtual std::string to_string() { return "i8"; }
 };
 
+/**
+ * @brief Bool type (i1)
+ * 
+ */
 class BoolType: public ValueType {
 protected:
     BoolType() : ValueType(TYPE_BOOL) {}
@@ -96,6 +123,10 @@ public:
     virtual std::string to_string() { return "i1"; }
 };
 
+/**
+ * @brief Void type, only for function return type
+ * 
+ */
 class VoidType : public Type {
 protected:
     VoidType() : Type(TYPE_VOID) {}
@@ -107,6 +138,10 @@ public:
     virtual std::string to_string() { return "void"; }
 };
 
+/**
+ * @brief Pointer type, _next points to pointed type
+ * 
+ */
 class PtrType : public Type {
 protected:
     Type* _next;
@@ -116,6 +151,12 @@ protected:
         }
     }
 public:
+    /**
+     * @brief 
+     * 
+     * @param type Pointed type
+     * @return PtrType* 
+     */
     static PtrType* get(Type* type) {
         static std::unordered_map<Type*, PtrType*> type_map{};
         if (auto iter = type_map.find(type); iter != type_map.end()) {
@@ -130,6 +171,10 @@ public:
     virtual std::string to_string() { return _next->to_string() + "*"; }
 };
 
+/**
+ * @brief Array type
+ * 
+ */
 class ArrayType : public Type {
 protected:
     uint32_t _length;
@@ -140,6 +185,13 @@ protected:
         }
     }
 public:
+    /**
+     * @brief 
+     * 
+     * @param type Array element type
+     * @param length 
+     * @return ArrayType* 
+     */
     static ArrayType* get(Type* type, uint32_t length) {
         static std::map<std::tuple<Type*, uint32_t>, ArrayType*> type_map{};
         auto key = std::make_tuple(type, length);
@@ -158,6 +210,10 @@ public:
     }
 };
 
+/**
+ * @brief Value used in llvm ir 
+ * 
+ */
 class Value {
 protected:
     Type* _type;
@@ -168,6 +224,10 @@ public:
     virtual std::string ident() = 0;
 };
 
+/**
+ * @brief Int constant like 123
+ * 
+ */
 class IntConstValue : public Value {
 private:
     int32_t _content;
@@ -177,6 +237,10 @@ public:
     virtual std::string ident() { return std::to_string(_content); }
 };
 
+/**
+ * @brief Char constant like 'c'
+ * 
+ */
 class CharConstValue : public Value {
 private:
     char _content;
@@ -186,6 +250,10 @@ public:
     virtual std::string ident() { return std::to_string(_content); }    
 };
 
+/**
+ * @brief Bool constant (true and false)
+ * 
+ */
 class BoolConstValue : public Value {
 private:
     bool _content;
@@ -195,6 +263,10 @@ public:
     virtual std::string ident() { return std::to_string(_content); }
 };
 
+/**
+ * @brief Array, wrapping values
+ * 
+ */
 class ArrayValue : public Value {
 private:
     std::vector<std::shared_ptr<Value>> _content;
@@ -218,6 +290,10 @@ public:
     }
 };
 
+/**
+ * @brief Int value
+ * 
+ */
 class IntValue : public Value {
 private:
     std::string _ident;
@@ -227,6 +303,10 @@ public:
     virtual std::string ident() { return "%" + _ident; }
 };
 
+/**
+ * @brief Char value
+ * 
+ */
 class CharValue : public Value {
 private:
     std::string _ident;
@@ -236,6 +316,10 @@ public:
     virtual std::string ident() { return "%" + _ident; }
 };
 
+/**
+ * @brief Bool value
+ * 
+ */
 class BoolValue : public Value {
 private:
     std::string _ident;
@@ -245,6 +329,10 @@ public:
     virtual std::string ident() { return "%" + _ident; }
 };
 
+/**
+ * @brief Pointer value
+ * 
+ */
 class PtrValue : public Value {
 private:
     bool _global;

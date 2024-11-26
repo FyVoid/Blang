@@ -16,6 +16,12 @@ IrGenerator::IrGenerator(std::shared_ptr<Logger> logger) {
     _logger = logger;
 }
 
+/**
+ * @brief Generate llvm ir module from global symbol table formed from syntax checker
+ * 
+ * @param checked_table 
+ * @return std::shared_ptr<IrModule> 
+ */
 std::shared_ptr<IrModule> IrGenerator::gen(std::shared_ptr<GlobalSymbolTable> checked_table) {
     _global_table = checked_table;
     _current_table = checked_table;

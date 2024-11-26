@@ -18,6 +18,12 @@ Blang::Blang() :
     _optimizer()
 {}
 
+/**
+ * @brief Tool function, load source from a file
+ * 
+ * @param filename 
+ * @return std::shared_ptr<std::vector<char>> 
+ */
 std::shared_ptr<std::vector<char>> Blang::load_file(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);
 
@@ -43,6 +49,12 @@ std::shared_ptr<std::vector<char>> Blang::load_file(const std::string& filename)
     return file_buffer_ptr;
 }
 
+/**
+ * @brief Blang compile function
+ * 
+ * @param filename File to compile
+ * @return std::shared_ptr<std::vector<char>> Compile result (assembly)
+ */
 std::shared_ptr<std::vector<char>> Blang::compile(const std::string& filename) {
     auto file_buffer = load_file(filename);
 
