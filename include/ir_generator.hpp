@@ -113,6 +113,12 @@ private:
     void setMain();
 public:
     IrGenerator(std::shared_ptr<Logger> logger);
+    /**
+    * @brief Generate llvm ir module from global symbol table formed from syntax checker
+    * 
+    * @param checked_table 
+    * @return std::shared_ptr<IrModule> 
+    */
     std::shared_ptr<IrModule> gen(std::shared_ptr<GlobalSymbolTable> checked_table);
 };
 

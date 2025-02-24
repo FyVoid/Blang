@@ -39,9 +39,21 @@ private:
     SyntaxChecker _syntax_checker;
     IrGenerator _ir_generator;
     Optimizer _optimizer;
+    /**
+    * @brief Tool function, load source from a file
+    * 
+    * @param filename 
+    * @return std::shared_ptr<std::vector<char>> 
+    */
     std::shared_ptr<std::vector<char>> load_file(const std::string& filename);
 public:
     Blang();
+    /**
+    * @brief Blang compile function
+    * 
+    * @param filename File to compile
+    * @return std::shared_ptr<std::vector<char>> Compile result (assembly)
+    */
     std::shared_ptr<std::vector<char>> compile(const std::string& filename);
 };
 

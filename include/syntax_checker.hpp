@@ -582,6 +582,12 @@ private:
     virtual void visit(FuncFParamsNode& node) override;
 public:
     SyntaxChecker(std::shared_ptr<Logger> logger);
+    /**
+    * @brief Check syntax errors in comp node, return global symbol table
+    * 
+    * @param comp_unit 
+    * @return std::shared_ptr<GlobalSymbolTable> 
+    */
     std::shared_ptr<GlobalSymbolTable> check(std::shared_ptr<CompNode> comp_unit);
 };
 

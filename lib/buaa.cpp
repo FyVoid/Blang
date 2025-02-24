@@ -5,12 +5,6 @@ namespace blang {
 
 namespace buaa {
 
-/**
- * @brief Error enum to buaa error type string
- * 
- * @param type 
- * @return std::string 
- */
 std::string to_string(ErrorType type) {
     static std::map<ErrorType, std::string> error_map = {
         {ERROR_LOGICAL_AND, "a"},
@@ -32,12 +26,6 @@ std::string to_string(ErrorType type) {
     return error_map.at(type);
 }
 
-/**
- * @brief Token enum to buaa token string
- * 
- * @param type 
- * @return std::string 
- */
 std::string to_buaa_token(frontend::TokenType type) {
     using namespace frontend;
     static std::map<TokenType, std::string> token_map = {

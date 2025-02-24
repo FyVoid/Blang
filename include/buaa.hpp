@@ -41,8 +41,20 @@ enum ErrorType {
     ERROR_ITER_IDENT_MISUSE,
 };
 
+/**
+ * @brief Error enum to buaa error type string
+ * 
+ * @param type 
+ * @return std::string 
+ */
 std::string to_string(ErrorType type);
 
+/**
+ * @brief Token enum to buaa token string
+ * 
+ * @param type 
+ * @return std::string 
+ */
 std::string to_buaa_token(frontend::TokenType type);
 
 }

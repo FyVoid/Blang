@@ -57,6 +57,12 @@ private:
 
 public:
     Lexer(std::shared_ptr<Logger> logger);
+    /**
+    * @brief From input(char vector) lex token vector
+    * 
+    * @param input_buffer 
+    * @return std::shared_ptr<std::vector<Token>> 
+    */
     std::shared_ptr<std::vector<Token>> lexTokens(std::shared_ptr<std::vector<char>> input_buffer);
 };
 

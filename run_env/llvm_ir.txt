@@ -1,0 +1,33 @@
+declare i32 @getint()
+declare i32 @getchar()
+declare void @putint(i32)
+declare void @putchar(i32)
+declare void @putstr(i8*)
+define i32 @main() {
+entry_main:
+    %0 = alloca i32
+    %1 = add i32 0, 0
+    store i32 %1, i32* %0
+    br label %for_entry0
+for_entry0:
+    %2 = add i32 0, 0
+    store i32 %2, i32* %0
+    br label %for_in0
+for_in0:
+    %3 = load i32, i32* %0
+    %4 = add i32 3, 0
+    %5 = icmp slt i32 %3, %4
+    br i1 %5, label %for_body0, label %for_end0
+for_body0:
+    %6 = load i32, i32* %0
+    br label %for_out0
+for_out0:
+    %7 = load i32, i32* %0
+    %8 = add i32 1, 0
+    %9 = add i32 %7, %8
+    store i32 %9, i32* %0
+    br label %for_in0
+for_end0:
+    %10 = add i32 0, 0
+    ret i32 %10
+}

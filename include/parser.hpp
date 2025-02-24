@@ -77,6 +77,10 @@ private:
     std::shared_ptr<std::vector<Token>> _tokens;
 
     uint32_t _pos;
+    /**
+    * @brief espace character definations
+    * 
+    */
     static const std::map<char, char> _escape_character_map;
 
     std::string parseString(const std::string in);
@@ -155,12 +159,35 @@ private:
 
     using ParseFuncPtr = std::shared_ptr<ParseResult> (Parser::*)();
     using ParseTypeFuncPtr = std::shared_ptr<ParseResult> (Parser::*)(bool);
+    /**
+    * @brief Try parsing a node, save results to buffer if success, discard any change if fail
+    * 
+    * @tparam T Node type to parse
+    * @param func Parse function
+    * @param buffer Parse result buffer
+    * @return std::shared_ptr<T> Return nullptr on failure
+    */
     template<typename T>
     std::shared_ptr<T> tryParse(ParseFuncPtr func, std::shared_ptr<ParseResult> buffer);
+    /**
+    * @brief Try parsing a node with constant flag types, save results to buffer on success, dicard any change on failure
+    * 
+    * @tparam T Node type to parse
+    * @param func Parse function
+    * @param is_const constant flag
+    * @param buffer Parse result buffer
+    * @return std::shared_ptr<T> Return nullptr on failure
+    */
     template<typename T>
     std::shared_ptr<T> tryParse(ParseTypeFuncPtr func, bool is_const, std::shared_ptr<ParseResult> buffer);
 public:
     Parser(std::shared_ptr<Logger> logger);
+    /**
+    * @brief Parse tokens from lexer to form ast
+    * 
+    * @param tokens 
+    * @return std::shared_ptr<CompNode> 
+    */
     std::shared_ptr<CompNode> parse(std::shared_ptr<std::vector<Token>> tokens);
 };
 
