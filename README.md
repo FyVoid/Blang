@@ -1,2 +1,1 @@
-## BUAA编译原理2024编译器开发
-基于C/C++，实现前端到LLVM IR生成
+## Code Archive for BUAA Compiler Lab 2024
